@@ -199,7 +199,7 @@ def main(_):
 
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
                         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
-                    print("One epoch, train_loss:", train_loss)
+                    print((current_step + 1) / num_batches_per_epoch, " epoch, train_loss:", train_loss)
                     total_loss.append(train_loss)
                     train_loss = 0
                     sys.stdout.flush()
