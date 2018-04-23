@@ -111,17 +111,25 @@ def main(_):
             saver = tf.train.Saver(tf.global_variables(), max_to_keep=20)
             sess.run(tf.global_variables_initializer())
 
+            has_pre_trained_model = False
             out_dir = os.path.abspath(os.path.join(FLAGS.train_dir, "runs"))
+
             print(out_dir)
             if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
             else:
-                print("delete runs/")
-                tf.gfile.DeleteRecursively(out_dir)
-                os.makedirs(out_dir)
+                print("continue training models")
+                ckpt = tf.train.get_checkpoint_state(out_dir)
+                if ckpt and ckpt.model_checkpoint_path:
+                    print("-------has_pre_trained_model--------")
+                    print(ckpt.model_checkpoint_path)
+                    has_pre_trained_model = True
 
-            print("Writing to {}\n".format(out_dir))
             checkpoint_prefix = os.path.join(out_dir, "model")
+            if has_pre_trained_model:
+                print("Restoring model from " + ckpt.model_checkpoint_path)
+                saver.restore(sess, ckpt.model_checkpoint_path)
+                print("DONE!")
 
             def batch_iter(all_data, batch_size, num_epochs, shuffle=True):
                 total = []
