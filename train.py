@@ -84,6 +84,8 @@ def main(_):
         os.path.join(FLAGS.train_dir, 'data/test.txt'), vocab_tuple=vocab_tuple)
 
     print("Loading Model...")
+    sys.stdout.flush()
+
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
             allow_soft_placement=FLAGS.allow_soft_placement,
@@ -124,12 +126,14 @@ def main(_):
                     print("-------has_pre_trained_model--------")
                     print(ckpt.model_checkpoint_path)
                     has_pre_trained_model = True
+                    sys.stdout.flush()
 
             checkpoint_prefix = os.path.join(out_dir, "model")
             if has_pre_trained_model:
                 print("Restoring model from " + ckpt.model_checkpoint_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
                 print("DONE!")
+                sys.stdout.flush()
 
             def batch_iter(all_data, batch_size, num_epochs, shuffle=True):
                 total = []
