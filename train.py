@@ -245,7 +245,7 @@ if __name__ == '__main__':
     # Model Hyperparameters
     # To modify
     tf.flags.DEFINE_string("wordvec_path", "data/wordvec.vec", "wordvec_path")
-    tf.flags.DEFINE_string("train_dir", "/home/haojianyong/file_1/pairCNN-Ranking-master/", "Training dir root")
+    tf.flags.DEFINE_string("train_dir", "/home/haojianyong/file_1/CNN/", "Training dir root")
     tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
     tf.flags.DEFINE_integer("num_epochs", 30, "Number of training epochs (default: 200)")
     tf.flags.DEFINE_integer("max_len_left", 25, "max document length of left input")

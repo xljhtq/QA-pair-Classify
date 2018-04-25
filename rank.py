@@ -5,6 +5,16 @@ import tensorflow as tf
 
 
 class Ranking(object):
+
+    def general_loss(self, logits, labels):
+        scores = tf.matmul(logits, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
+        labels2 = tf.matmul(labels, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
+
+        tmp = tf.multiply(tf.subtract(1.0, labels2), tf.square(scores))
+        temp2 = tf.multiply(labels2, tf.square(tf.maximum(tf.subtract(1.0, scores), 0.0)))
+        sum = tf.add(tmp, temp2)
+        return sum
+
     def __init__(self, max_len_left, max_len_right,
                  vocab_size, embedding_size, filter_sizes,
                  num_filters, num_hidden,
@@ -113,7 +123,8 @@ class Ranking(object):
 
         # CalculateMean cross-entropy loss
         with tf.name_scope("loss"):
-            losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.input_y)
+            losses = self.general_loss(logits=self.scores, labels=self.input_y)
+            # losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.input_y)
             self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
             print("self.loss", self.loss)
 
