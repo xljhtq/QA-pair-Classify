@@ -253,8 +253,8 @@ if __name__ == '__main__':
     tf.flags.DEFINE_boolean("fix_word_vec", True, "fix_word_vec")
 
     tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 64)")
-    tf.flags.DEFINE_string("filter_sizes", "2,3", "Comma-separated filter sizes (default: '2,3')")
-    tf.flags.DEFINE_integer("num_filters", 64, "Number of filters per filter size (default: 64)")
+    tf.flags.DEFINE_string("filter_sizes", "2,3,5", "Comma-separated filter sizes (default: '2,3')")
+    tf.flags.DEFINE_integer("num_filters", 100, "Number of filters per filter size (default: 64)")
     tf.flags.DEFINE_integer("num_hidden", 100, "Number of hidden layer units (default: 100)")
     tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
     tf.flags.DEFINE_float("l2_reg_lambda", 1e-4, "L2 regularizaion lambda (default: 0.0)")
