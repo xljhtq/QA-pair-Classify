@@ -40,7 +40,7 @@ def load_data(filepath, vocab_tuple=None):
     data_left = []
     data_centre = []
     data_right = []
-    dic={}
+    dic = {}
     for line in open(filepath):
         line = line.strip().strip("\n").split("\t")
         if len(line) != 4: continue
@@ -53,14 +53,14 @@ def load_data(filepath, vocab_tuple=None):
         data_right.append(rightLsit)
         for word in leftList:
             if word not in dic:
-                dic[word]=1
+                dic[word] = 1
         for word in centreList:
             if word not in dic:
-                dic[word]=1
+                dic[word] = 1
         for word in rightLsit:
             if word not in dic:
-                dic[word]=1
-    print("word dic length: ",len(dic))
+                dic[word] = 1
+    print("word dic length: ", len(dic))
     data_left = pad_sentences(data_left, FLAGS.max_len)
     data_centre = pad_sentences(data_centre, FLAGS.max_len)
     data_right = pad_sentences(data_right, FLAGS.max_len)
@@ -170,11 +170,14 @@ def main(_):
                         cnn.input_y: y_batch_dev,
                         cnn.dropout_keep_prob: 1.0
                     }
-                    step, loss, accuracy, softmax_score = sess.run(
-                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score],
+                    step, loss, accuracy, softmax_score, cosine_left, cosine_right = sess.run(
+                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score,
+                         cnn.cosine_left, cnn.cosine_right],
                         feed_dict)
                     losses.append(loss)
                     accuracies.append(accuracy)
+                print("cosine_left: ", cosine_left)
+                print("cosine_right: ", cosine_right)
                 return np.mean(np.array(losses)), np.mean(np.array(accuracies))
 
             def overfit(dev_loss):
@@ -205,9 +208,8 @@ def main(_):
                     cnn.input_y: y_batch,
                     cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
-                _, current_step, loss, accuracy, cosine_left, cosine_right = sess.run(
-                    [train_op, global_step, cnn.loss, cnn.accuracy, cnn.cosine_left, cnn.cosine_right],
-                    feed_dict)
+                _, current_step, loss, accuracy = sess.run([train_op, global_step, cnn.loss, cnn.accuracy],
+                                                           feed_dict)
                 train_loss += loss
 
                 if current_step % 1000 == 0:
@@ -217,8 +219,6 @@ def main(_):
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
                         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
                     print((current_step + 1) / num_batches_per_epoch, " epoch, train_loss:", train_loss)
-                    print("cosine_left: ",cosine_left)
-                    print("cosine_right: ", cosine_right)
                     total_loss.append(train_loss)
                     train_loss = 0
                     sys.stdout.flush()

@@ -66,7 +66,7 @@ data_label = []
 data_left = []
 data_centre = []
 data_right = []
-line = "1 1\t我 想 改 一下 我 的 密码 刷卡 密码\t修改 交易 密码\t改 密码\n"
+line = "1 0\t大家 晚上 好\t晚上 好\t其他 的 没用\n"
 # line="0 1\t替 我 变更 我 的 卡 额度 可以 吗\t修改 交易 密码\t我 想 改 一下 我 的 密码 刷卡 密码\n"
 line = line.strip().strip("\n").split("\t")
 data_label.append(map(int, line[0].split(" ")))
