@@ -38,7 +38,7 @@ class Vocab(object):
         for cur_index in iter(range(self.vocab_size)):
             self.word_vecs[cur_index][:len(word_vecs[cur_index])] = word_vecs[cur_index]
 
-        word2id_path = train_dir + "data/word2id_dssmCnn.txt"
+        word2id_path = train_dir + "data_dssm/word2id_dssmCnn.txt"
         with open(word2id_path, "w") as out_op:
             for word in self.word2id:
                 out_op.write(word + "\t" + str(self.word2id[word]) + "\n")

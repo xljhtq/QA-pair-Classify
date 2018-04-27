@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_bicnn import Ranking_DSSMCNN
+from rank_dssmcnn import Ranking_DSSMCNN
 from vocab_utils import Vocab
 
 
@@ -40,14 +40,27 @@ def load_data(filepath, vocab_tuple=None):
     data_left = []
     data_centre = []
     data_right = []
+    dic={}
     for line in open(filepath):
         line = line.strip().strip("\n").split("\t")
         if len(line) != 4: continue
         data_label.append(map(int, line[0].split(" ")))
-        data_left.append(line[1].strip().split(" "))
-        data_centre.append(line[2].split(" "))
-        data_right.append(line[3].split(" "))
-
+        leftList = line[1].strip().split(" ")
+        data_left.append(leftList)
+        centreList = line[2].strip().split(" ")
+        data_centre.append(centreList)
+        rightLsit = line[3].strip().split(" ")
+        data_right.append(rightLsit)
+        for word in leftList:
+            if word not in dic:
+                dic[word]=1
+        for word in centreList:
+            if word not in dic:
+                dic[word]=1
+        for word in rightLsit:
+            if word not in dic:
+                dic[word]=1
+    print("word dic length: ",len(dic))
     data_left = pad_sentences(data_left, FLAGS.max_len)
     data_centre = pad_sentences(data_centre, FLAGS.max_len)
     data_right = pad_sentences(data_right, FLAGS.max_len)
@@ -67,10 +80,10 @@ def main(_):
     wordVocab.fromText_format3(FLAGS.train_dir, FLAGS.wordvec_path)
     vocab_tuple = (wordVocab.word2id, wordVocab.id2word)
     x_left_train, x_centre_train, x_right_train, y_train_label, vocab, vocab_inv = load_data(
-        os.path.join(FLAGS.train_dir, 'data_dssm/train.txt'), vocab_tuple=vocab_tuple)
+        os.path.join(FLAGS.train_dir, FLAGS.train_path), vocab_tuple=vocab_tuple)
 
     x_left_dev, x_centre_dev, x_right_dev, y_dev, vocab, vocab_inv = load_data(
-        os.path.join(FLAGS.train_dir, 'data_dssm/test.txt'), vocab_tuple=vocab_tuple)
+        os.path.join(FLAGS.train_dir, FLAGS.test_path), vocab_tuple=vocab_tuple)
 
     print("Loading Model...")
     sys.stdout.flush()
@@ -160,7 +173,6 @@ def main(_):
                     step, loss, accuracy, softmax_score = sess.run(
                         [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score],
                         feed_dict)
-                    print(softmax_score)
                     losses.append(loss)
                     accuracies.append(accuracy)
                 return np.mean(np.array(losses)), np.mean(np.array(accuracies))
@@ -193,8 +205,8 @@ def main(_):
                     cnn.input_y: y_batch,
                     cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
-                _, current_step, loss, accuracy, stack = sess.run(
-                    [train_op, global_step, cnn.loss, cnn.accuracy, cnn.stack],
+                _, current_step, loss, accuracy, cosine_left, cosine_right = sess.run(
+                    [train_op, global_step, cnn.loss, cnn.accuracy, cnn.cosine_left, cnn.cosine_right],
                     feed_dict)
                 train_loss += loss
 
@@ -205,6 +217,8 @@ def main(_):
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
                         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
                     print((current_step + 1) / num_batches_per_epoch, " epoch, train_loss:", train_loss)
+                    print("cosine_left: ",cosine_left)
+                    print("cosine_right: ", cosine_right)
                     total_loss.append(train_loss)
                     train_loss = 0
                     sys.stdout.flush()
@@ -235,6 +249,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--wordvec_path", default="data/wordvec.vec", help="wordvec_path")
     parser.add_argument("--train_dir", default="/home/haojianyong/file_1/CNN/", help="Training dir root")
+    parser.add_argument("--train_path", default="data_dssm/total_shuf.txt", help="train path")
+    parser.add_argument("--test_path", default="data_dssm/test.txt", help="test path")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
     parser.add_argument("--num_epochs", type=int, default=30, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
@@ -242,19 +258,18 @@ if __name__ == '__main__':
 
     parser.add_argument("--embedding_dim", type=int, default=128,
                         help="Dimensionality of character embedding (default: 64)")
-    parser.add_argument("--filter_sizes", default="2,3,5", help="Comma-separated filter sizes (default: '2,3')")
+    parser.add_argument("--filter_sizes", default="2,3,4", help="Comma-separated filter sizes (default: '2,3')")
     parser.add_argument("--num_filters", type=int, default=100, help="Number of filters per filter size (default: 64)")
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
     parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
     parser.add_argument("--l2_reg_lambda", default=1e-4, help="L2 regularizaion lambda")
-    parser.add_argument("--most_words", type=int, default=300000, help="Most number of words in vocab (default: 300000)")
-    # Training parameters
-    parser.add_argument("--seed", type=int, default=123, help="Random seed (default: 123)")
-    parser.add_argument("--eval_split", type=float, default=0.1, help="Use how much data for evaluating (default: 0.1)")
-    parser.add_argument("--evaluate_every", type=int, default=5000,
-                        help="Evaluate model on dev set after this many steps (default: 100)")
-    parser.add_argument("--checkpoint_every", type=int, default=5000,
-                        help="Save model after this many steps (default: 100)")
+    # parser.add_argument("--most_words", type=int, default=300000,
+    #                     help="Most number of words in vocab (default: 300000)")
+    # parser.add_argument("--eval_split", type=float, default=0.1, help="Use how much data for evaluating (default: 0.1)")
+    # parser.add_argument("--evaluate_every", type=int, default=5000,
+    #                     help="Evaluate model on dev set after this many steps (default: 100)")
+    # parser.add_argument("--checkpoint_every", type=int, default=5000,
+    #                     help="Save model after this many steps (default: 100)")
     # Misc Parameters
     parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
     parser.add_argument("--log_device_placement", default=False, help="Log placement of ops on devices")
