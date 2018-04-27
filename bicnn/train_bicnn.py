@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # encoding=utf-8
 
+import argparse
 import os
 import sys
-import itertools
 import numpy as np
 import tensorflow as tf
-from collections import Counter
-from rank import Ranking
+from rank_bicnn import Ranking_DSSMCNN
 from vocab_utils import Vocab
 
 
@@ -24,64 +23,54 @@ def pad_sentences(sentences, sequence_length, padding_word="<PAD/>"):
     return padded_sentences
 
 
-def build_input_data(data_left, data_right, label, vocab):
+def build_input_data(data_left, data_centre, data_right, label, vocab):
     vocabset = set(vocab.keys())
     out_left = np.array(
         [[vocab[word] if word in vocabset else vocab['<UNK/>'] for word in sentence] for sentence in data_left])
+    out_centre = np.array(
+        [[vocab[word] if word in vocabset else vocab['<UNK/>'] for word in sentence] for sentence in data_centre])
     out_right = np.array(
         [[vocab[word] if word in vocabset else vocab['<UNK/>'] for word in sentence] for sentence in data_right])
-    out_y = np.array([[0, 1] if x == 1 else [1, 0] for x in label])
-    return [out_left, out_right, out_y]
-
-
-def build_vocab(sentences):
-    word_counts = Counter(itertools.chain(*sentences))
-    # id2word
-    t = word_counts.most_common(FLAGS.most_words - 1)  # 根据出现次数倒序排序
-    vocabulary_inv = [x[0] for x in t]  # 目的只是建立词表
-    vocabulary_inv = list(sorted(vocabulary_inv))
-    vocabulary_inv.append('<UNK/>')
-    # word2id
-    vocabulary = {x: i for i, x in enumerate(vocabulary_inv)}
-    return [vocabulary, vocabulary_inv]
+    out_y = np.array(label)
+    return [out_left, out_centre, out_right, out_y]
 
 
 def load_data(filepath, vocab_tuple=None):
     data_label = []
     data_left = []
+    data_centre = []
     data_right = []
     for line in open(filepath):
         line = line.strip().strip("\n").split("\t")
-        if len(line) < 3: continue
-        data_label.append(int(line[0]))
-        data_left.append(line[1].split(" "))
-        data_right.append(line[2].split(" "))
+        if len(line) != 4: continue
+        data_label.append(map(int, line[0].split(" ")))
+        data_left.append(line[1].strip().split(" "))
+        data_centre.append(line[2].split(" "))
+        data_right.append(line[3].split(" "))
 
-    num_pos = sum(data_label)
-    # 需要优化
-    data_left = pad_sentences(data_left, FLAGS.max_len_left)
-    data_right = pad_sentences(data_right, FLAGS.max_len_right)
+    data_left = pad_sentences(data_left, FLAGS.max_len)
+    data_centre = pad_sentences(data_centre, FLAGS.max_len)
+    data_right = pad_sentences(data_right, FLAGS.max_len)
 
-    if vocab_tuple is None:
-        vocab, vocab_inv = build_vocab(data_left + data_right)
-    else:
-        vocab, vocab_inv = vocab_tuple
+    vocab, vocab_inv = vocab_tuple
 
-    data_left, data_right, data_label = build_input_data(data_left, data_right, data_label, vocab)
-    return data_left, data_right, data_label, vocab, vocab_inv, num_pos
+    data_left, data_centre, data_right, data_label = build_input_data(data_left, data_centre, data_right, data_label,
+                                                                      vocab)
+    return data_left, data_centre, data_right, data_label, vocab, vocab_inv
 
 
 def main(_):
-    # Load data
+    print(FLAGS)
+
     print("Loading data...")
     wordVocab = Vocab()
     wordVocab.fromText_format3(FLAGS.train_dir, FLAGS.wordvec_path)
     vocab_tuple = (wordVocab.word2id, wordVocab.id2word)
-    x_left_train, x_right_train, y_train_label, vocab, vocab_inv, num_pos = load_data(
-        os.path.join(FLAGS.train_dir, 'data/train.txt'), vocab_tuple=vocab_tuple)
+    x_left_train, x_centre_train, x_right_train, y_train_label, vocab, vocab_inv = load_data(
+        os.path.join(FLAGS.train_dir, 'data_dssm/train.txt'), vocab_tuple=vocab_tuple)
 
-    x_left_dev, x_right_dev, y_dev, vocab, vocab_inv, num_pos = load_data(
-        os.path.join(FLAGS.train_dir, 'data/test.txt'), vocab_tuple=vocab_tuple)
+    x_left_dev, x_centre_dev, x_right_dev, y_dev, vocab, vocab_inv = load_data(
+        os.path.join(FLAGS.train_dir, 'data_dssm/test.txt'), vocab_tuple=vocab_tuple)
 
     print("Loading Model...")
     sys.stdout.flush()
@@ -92,9 +81,8 @@ def main(_):
             log_device_placement=FLAGS.log_device_placement)
         sess = tf.Session(config=session_conf)
         with sess.as_default():
-            cnn = Ranking(
-                max_len_left=FLAGS.max_len_left,
-                max_len_right=FLAGS.max_len_right,
+            cnn = Ranking_DSSMCNN(
+                max_len=FLAGS.max_len,
                 vocab_size=len(vocab),
                 embedding_size=FLAGS.embedding_dim,
                 filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
@@ -154,22 +142,25 @@ def main(_):
                         total.append(shuffled_data[start_index:end_index])
                 return np.array(total), num_batches_per_epoch
 
-            def dev_whole(x_left_dev, x_right_dev, y_dev):
+            def dev_whole(x_left_dev, x_centre_dev, x_right_dev, y_dev):
                 batches_dev, _ = batch_iter(
-                    list(zip(x_left_dev, x_right_dev, y_dev)), FLAGS.batch_size * 2, num_epochs=1, shuffle=False)
+                    list(zip(x_left_dev, x_centre_dev, x_right_dev, y_dev)), FLAGS.batch_size * 2, num_epochs=1,
+                    shuffle=False)
                 losses = []
                 accuracies = []
                 for idx, batch_dev in enumerate(batches_dev):
-                    x_left_batch_dev, x_right_batch_dev, y_batch_dev = zip(*batch_dev)
+                    x_left_batch_dev, x_centre_batch_dev, x_right_batch_dev, y_batch_dev = zip(*batch_dev)
                     feed_dict = {
                         cnn.input_left: x_left_batch_dev,
+                        cnn.input_centre: x_centre_batch_dev,
                         cnn.input_right: x_right_batch_dev,
                         cnn.input_y: y_batch_dev,
                         cnn.dropout_keep_prob: 1.0
                     }
-                    step, loss, accuracy, sims, prob = sess.run(
-                        [global_step, cnn.loss, cnn.accuracy, cnn.sims, cnn.prob],
+                    step, loss, accuracy, softmax_score = sess.run(
+                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score],
                         feed_dict)
+                    print(softmax_score)
                     losses.append(loss)
                     accuracies.append(accuracy)
                 return np.mean(np.array(losses)), np.mean(np.array(accuracies))
@@ -184,28 +175,30 @@ def main(_):
                 return True
 
             # Generate batches
-            batches_epochs, num_batches_per_epoch = batch_iter(list(zip(x_left_train, x_right_train, y_train_label)),
-                                                               FLAGS.batch_size,
-                                                               FLAGS.num_epochs)
+            batches_epochs, num_batches_per_epoch = batch_iter(
+                list(zip(x_left_train, x_centre_train, x_right_train, y_train_label)),
+                FLAGS.batch_size,
+                FLAGS.num_epochs)
 
             # Training loop. For each batch...
             dev_accuracy = []
             train_loss = 0
             total_loss = []
             for batch in batches_epochs:
-                x1_batch, x2_batch, y_batch = zip(*batch)
+                x1_batch, x_centre_batch, x2_batch, y_batch = zip(*batch)
                 feed_dict = {
                     cnn.input_left: x1_batch,
+                    cnn.input_centre: x_centre_batch,
                     cnn.input_right: x2_batch,
                     cnn.input_y: y_batch,
                     cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
-                _, current_step, loss, accuracy = sess.run(
-                    [train_op, global_step, cnn.loss, cnn.accuracy],
+                _, current_step, loss, accuracy, stack = sess.run(
+                    [train_op, global_step, cnn.loss, cnn.accuracy, cnn.stack],
                     feed_dict)
                 train_loss += loss
 
-                if current_step % 100 == 0:
+                if current_step % 1000 == 0:
                     print("step {}, loss {:g}, acc {:g}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
@@ -219,7 +212,7 @@ def main(_):
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
                         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
                     print("\nEvaluation:")
-                    loss, accuracy = dev_whole(x_left_dev, x_right_dev, y_dev)
+                    loss, accuracy = dev_whole(x_left_dev, x_centre_dev, x_right_dev, y_dev)
                     dev_accuracy.append(accuracy)
                     print("Recently accuracy:")
                     print (dev_accuracy[-10:])
@@ -239,34 +232,32 @@ def main(_):
 
 
 if __name__ == '__main__':
-    # Parameters
-    # ==================================================
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--wordvec_path", default="data/wordvec.vec", help="wordvec_path")
+    parser.add_argument("--train_dir", default="/home/haojianyong/file_1/CNN/", help="Training dir root")
+    parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
+    parser.add_argument("--num_epochs", type=int, default=30, help="Number of training epochs (default: 200)")
+    parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
+    parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 
-    # Model Hyperparameters
-    # To modify
-    tf.flags.DEFINE_string("wordvec_path", "data/wordvec.vec", "wordvec_path")
-    tf.flags.DEFINE_string("train_dir", "/home/haojianyong/file_1/CNN/", "Training dir root")
-    tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
-    tf.flags.DEFINE_integer("num_epochs", 30, "Number of training epochs (default: 200)")
-    tf.flags.DEFINE_integer("max_len_left", 25, "max document length of left input")
-    tf.flags.DEFINE_integer("max_len_right", 25, "max document length of right input")
-    tf.flags.DEFINE_boolean("fix_word_vec", True, "fix_word_vec")
-
-    tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 64)")
-    tf.flags.DEFINE_string("filter_sizes", "2,3,5", "Comma-separated filter sizes (default: '2,3')")
-    tf.flags.DEFINE_integer("num_filters", 100, "Number of filters per filter size (default: 64)")
-    tf.flags.DEFINE_integer("num_hidden", 100, "Number of hidden layer units (default: 100)")
-    tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
-    tf.flags.DEFINE_float("l2_reg_lambda", 1e-4, "L2 regularizaion lambda (default: 0.0)")
-    tf.flags.DEFINE_integer("most_words", 300000, "Most number of words in vocab (default: 300000)")
+    parser.add_argument("--embedding_dim", type=int, default=128,
+                        help="Dimensionality of character embedding (default: 64)")
+    parser.add_argument("--filter_sizes", default="2,3,5", help="Comma-separated filter sizes (default: '2,3')")
+    parser.add_argument("--num_filters", type=int, default=100, help="Number of filters per filter size (default: 64)")
+    parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
+    parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
+    parser.add_argument("--l2_reg_lambda", default=1e-4, help="L2 regularizaion lambda")
+    parser.add_argument("--most_words", type=int, default=300000, help="Most number of words in vocab (default: 300000)")
     # Training parameters
-    tf.flags.DEFINE_integer("seed", 123, "Random seed (default: 123)")
-    tf.flags.DEFINE_float("eval_split", 0.1, "Use how much data for evaluating (default: 0.1)")
-    tf.flags.DEFINE_integer("evaluate_every", 1000, "Evaluate model on dev set after this many steps (default: 100)")
-    tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 100)")
+    parser.add_argument("--seed", type=int, default=123, help="Random seed (default: 123)")
+    parser.add_argument("--eval_split", type=float, default=0.1, help="Use how much data for evaluating (default: 0.1)")
+    parser.add_argument("--evaluate_every", type=int, default=5000,
+                        help="Evaluate model on dev set after this many steps (default: 100)")
+    parser.add_argument("--checkpoint_every", type=int, default=5000,
+                        help="Save model after this many steps (default: 100)")
     # Misc Parameters
-    tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
-    tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
+    parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
+    parser.add_argument("--log_device_placement", default=False, help="Log placement of ops on devices")
 
-    FLAGS = tf.flags.FLAGS
-    tf.app.run()
+    FLAGS, unparsed = parser.parse_known_args()
+    tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

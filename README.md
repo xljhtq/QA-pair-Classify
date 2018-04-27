@@ -5,3 +5,7 @@
 其中，additional features include: sentence lengths, another sample similarities (namely tfidf) and so on , which depends on your project.
 3.在最後的loss function中，通過cross_entropy_function和改造的hinge_loss_function比較，使用改造的loss函數進行訓練，可以得到相似的語句有更大的得分，更不相似的
 語句有更小的得分。
+
+Note:
+1.在模型中，tf.nn.softmax_cross_entropy_with_logits包含兩個部分(softmax和交叉熵的計算)，所以當改造模型時候，必須先單獨使用softmax函數變成概率的取值，
+否則在此之前是有負數的出現，干擾loss函數的計算

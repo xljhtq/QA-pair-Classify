@@ -12,14 +12,14 @@ def freeze_graph(ckpt_dictionary):
         saver.restore(sess, input_checkpoint)  # 恢复图并得到数据
 
         output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_node_names=['accuracy/accuracy','output/prob'])
-        with tf.gfile.GFile("/home/haojianyong/file_1/pairCNN-Ranking-master/runs/model_cnn.pb", "wb") as f:  # 保存模型
+        with tf.gfile.GFile("/home/haojianyong/file_1/CNN/runs/model_cnn_test.pb", "wb") as f:  # 保存模型
             f.write(output_graph_def.SerializeToString())  # 序列化输出
         print("%d ops in the final graph." % len(output_graph_def.node))  # 得到当前图有几个操作节点
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ckpt_dictionary", type=str, default="/home/haojianyong/file_1/pairCNN-Ranking-master/runs",help="input ckpt model dir")
+    parser.add_argument("--ckpt_dictionary", type=str, default="/home/haojianyong/file_1/CNN/runs",help="input ckpt model dir")
     args = parser.parse_args()
     print(args.ckpt_dictionary)
     freeze_graph(args.ckpt_dictionary)

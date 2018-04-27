@@ -9,7 +9,8 @@ import numpy as np
 import time
 
 max_len_left = max_len_right = 25
-root_dir="/home/haojianyong/file_1/pairCNN-Ranking-master"
+root_dir = "/home/haojianyong/file_1/CNN/"
+
 
 def pad_sentences(sentences, sequence_length, padding_word="<PAD/>"):
     padded_sentences = []
@@ -53,8 +54,6 @@ def batch_iter(all_data, batch_size, num_epochs, shuffle=False):
     return np.array(total), num_batches_per_epoch
 
 
-
-
 print("Loading data...")
 wordVocab = Vocab()
 wordVocab.fromText_format3(root_dir, "data/wordvec.vec")
@@ -63,14 +62,19 @@ vocab_tuple = (wordVocab.word2id, wordVocab.id2word)
 data_label = []
 data_left = []
 data_right = []
-
-testPath = "/home/haojianyong/file_1/context_similarity/guangFaFAQ/guangFaFAQ_nonmatch_cut.txt"
-for line in open(testPath):
-    line = line.strip().strip("\n").split("\t")
-    if len(line) < 3: continue
-    data_label.append(int(line[0]))
-    data_left.append(line[1].split(" "))
-    data_right.append(line[2].split(" "))
+# testPath = "/home/haojianyong/file_1/context_similarity/guangFaFAQ/guangFaFAQ_nonmatch_cut.txt"
+# for line in open(testPath):
+#     line = line.strip().strip("\n").split("\t")
+#     if len(line) < 3: continue
+#     data_label.append(int(line[0]))
+#     data_left.append(line[1].split(" "))
+#     data_right.append(line[2].split(" "))
+# line = "1\t问 一下 信用卡 取现 要收 多少 手续费\t招行 取 现金 还要 收 手续费 吗\n"
+line="1\t招行 取 现金 还要 收 手续费 吗\t问 一下 信用卡 取现 要收 多少 手续费\n"
+line = line.strip().strip("\n").split("\t")
+data_label.append(int(line[0]))
+data_left.append(line[1].split(" "))
+data_right.append(line[2].split(" "))
 x1 = data_left
 x2 = data_right
 x_label = data_label
@@ -82,7 +86,7 @@ x_left_dev, x_right_dev, y_dev = build_input_data(data_left, data_right, data_la
 
 g_graph = tf.Graph()
 with g_graph.as_default():
-    with tf.gfile.GFile(root_dir+'/runs/model_cnn.pb', "rb") as f:
+    with tf.gfile.GFile(root_dir + 'runs/model_cnn.pb', "rb") as f:
         graph_def = tf.GraphDef()  # 先创建一个空的图
         graph_def.ParseFromString(f.read())  # 加载proto-buf中的模型
         tf.import_graph_def(graph_def, name='')  # 最后复制pre-def图的到默认图中
@@ -98,7 +102,8 @@ with g_graph.as_default():
 
         output_prob = sess.graph.get_tensor_by_name("output/prob:0")
 
-        with open(root_dir+"/data/result_nonmatch.txt", "w") as out_op:
+        similarity_sum = sess.graph.get_tensor_by_name("similarity/Sum:0")
+        with open(root_dir + "data/result_nonmatch.txt", "w") as out_op:
             t1 = time.time()
             batches_dev, _ = batch_iter(list(zip(x_left_dev, x_right_dev, y_dev)), 64, num_epochs=1, shuffle=False)
 
@@ -107,19 +112,23 @@ with g_graph.as_default():
             for idx, batch_dev in enumerate(batches_dev):
                 x_left_batch_dev, x_right_batch_dev, y_batch_dev = zip(*batch_dev)
 
-                accuracy, prob = sess.run([output_accuracy, output_prob], feed_dict={input_left: x_left_batch_dev,
-                                                                                     input_right: x_right_batch_dev,
-                                                                                     input_y: y_batch_dev,
-                                                                                     dropout_keep_prob: 1.0
-                                                                                     })
+                accuracy, prob, sim = sess.run([output_accuracy, output_prob, similarity_sum],
+                                               feed_dict={input_left: x_left_batch_dev,
+                                                          input_right: x_right_batch_dev,
+                                                          input_y: y_batch_dev,
+                                                          dropout_keep_prob: 1.0
+                                                          })
+                # print(sim)
                 # accuracies.append(accuracy)
-                # for i in range(len(y_batch_dev)):
-                #     p = prob[i].tolist()
-                #     y_label = y_batch_dev[i].tolist()
-                #     if y_label[1] != [1 if p[1] >= 0.5 else 0][0]:
-                #         result = str(y_label[1]) + "\t" + str(p[1]) + "\t" + " ".join(x1[i]) + "\t" + " ".join(
-                #             x2[i]) + "\n"
-                #         out_op.write(result)
-            t2=time.time()
-            print((t2-t1)/len(x_label)*1000,"ms")
+                for i in range(len(y_batch_dev)):
+                    p = prob[i].tolist()
+                    y_label = y_batch_dev[i].tolist()
+                    if y_label[1] != [1 if p[1] >= 0.5 else 0][0]:
+                        result = str(y_label[1]) + "\t" + str(p[1]) + "\t" + " ".join(x1[i]) + "\t" + " ".join(
+                            x2[i]) + "\n"
+                        out_op.write(result)
+                    else:
+                        print(p[1])
+            t2 = time.time()
+            print((t2 - t1) / len(x_label) * 1000, "ms")
         # print(np.mean(np.array(accuracies)))

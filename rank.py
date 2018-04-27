@@ -5,6 +5,10 @@ import tensorflow as tf
 
 
 class Ranking(object):
+    def leaky_relu(self, x, leak=0.2):
+        f1 = 0.5 * (1 + leak)
+        f2 = 0.5 * (1 - leak)
+        return f1 * x + f2 * tf.abs(x)
 
     def general_loss(self, logits, labels):
         scores = tf.matmul(logits, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
@@ -89,6 +93,7 @@ class Ranking(object):
                                 initializer=tf.contrib.layers.xavier_initializer())
             self.transform_left = tf.matmul(self.h_pool_left, W)
             self.sims = tf.reduce_sum(tf.multiply(self.transform_left, self.h_pool_right), 1, keep_dims=True)
+            print(self.sims.name)
 
         # Make input for classification
         self.new_input = tf.concat(axis=1, values=[self.h_pool_left, self.sims, self.h_pool_right], name='new_input')
@@ -102,7 +107,8 @@ class Ranking(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_hidden]), name="b")
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
-            self.hidden_output = tf.nn.relu(tf.nn.xw_plus_b(self.new_input, W, b, name="hidden_output"))
+            self.hidden_output = self.leaky_relu(tf.nn.xw_plus_b(self.new_input, W, b, name="hidden_output"))
+            # self.hidden_output = tf.nn.relu(tf.nn.xw_plus_b(self.new_input, W, b, name="hidden_output"))
 
         # Add dropout
         with tf.name_scope("dropout"):
