@@ -195,7 +195,7 @@ def main(_):
                 FLAGS.batch_size,
                 FLAGS.num_epochs)
 
-            # Training loop. For each batch...
+            print(num_batches_per_epoch)
             dev_accuracy = []
             train_loss = 0
             total_loss = []
@@ -212,7 +212,7 @@ def main(_):
                                                            feed_dict)
                 train_loss += loss
 
-                if current_step % 1000 == 0:
+                if current_step % 10000 == 0:
                     print("step {}, loss {:g}, acc {:g}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
@@ -262,15 +262,7 @@ if __name__ == '__main__':
     parser.add_argument("--num_filters", type=int, default=100, help="Number of filters per filter size (default: 64)")
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
     parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
-    parser.add_argument("--l2_reg_lambda", default=1e-4, help="L2 regularizaion lambda")
-    # parser.add_argument("--most_words", type=int, default=300000,
-    #                     help="Most number of words in vocab (default: 300000)")
-    # parser.add_argument("--eval_split", type=float, default=0.1, help="Use how much data for evaluating (default: 0.1)")
-    # parser.add_argument("--evaluate_every", type=int, default=5000,
-    #                     help="Evaluate model on dev set after this many steps (default: 100)")
-    # parser.add_argument("--checkpoint_every", type=int, default=5000,
-    #                     help="Save model after this many steps (default: 100)")
-    # Misc Parameters
+    parser.add_argument("--l2_reg_lambda", type=float, default=1e-4, help="L2 regularizaion lambda")
     parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
     parser.add_argument("--log_device_placement", default=False, help="Log placement of ops on devices")
 
