@@ -39,6 +39,7 @@ class Ranking(object):
                 W = tf.get_variable("word_embedding", trainable=word_vec_trainable,
                                     initializer=wordInitial,
                                     dtype=tf.float32)
+                print("fix_word_vec")
             else:
                 W = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0), name="W_Embedding")
 
@@ -52,14 +53,12 @@ class Ranking(object):
         pooled_outputs_right = []
         for i, filter_size in enumerate(filter_sizes):
             filter_shape = [filter_size, embedding_size, 1, num_filters]
+            W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1),
+                            name="W-%s" %filter_size)  # W: [filter_height, filter_width, in_channels, out_channels], 与input对应
+            b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b-%s" %filter_size)
             with tf.name_scope("conv-maxpool-left-%s" % filter_size):
-                W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1),
-                                name="W")  # W: [filter_height, filter_width, in_channels, out_channels], 与input对应
-                b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
-
                 conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")  # conv: [batch_size, 20-2+1, 1, out_channels]
-
+                h = self.leaky_relu(tf.nn.bias_add(conv, b), name="relu")  # conv: [batch_size, 20-2+1, 1, out_channels]
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len_left - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -67,11 +66,8 @@ class Ranking(object):
                                         name="pool")  # pooled: [batch_size, 1, 1, out_channels]
                 pooled_outputs_left.append(pooled)
             with tf.name_scope("conv-maxpool-right-%s" % filter_size):
-                # Convolution Layer
-                W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
-                b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
                 conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+                h = self.leaky_relu(tf.nn.bias_add(conv, b), name="relu")
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len_right - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],

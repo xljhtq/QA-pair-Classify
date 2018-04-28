@@ -40,6 +40,7 @@ class Ranking_DSSMCNN(object):
                 W = tf.get_variable("word_embedding", trainable=word_vec_trainable,
                                     initializer=wordInitial,
                                     dtype=tf.float32)
+                print("fix_word_vec")
             else:
                 W = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0), name="W_Embedding")
 
