@@ -44,7 +44,7 @@ def load_data(filepath, vocab_tuple=None):
     for line in open(filepath):
         line = line.strip().strip("\n").split("\t")
         if len(line) != 4: continue
-        data_label.append(map(int, line[0].split(" ")))
+        data_label.append([int(x) for x in line[0].split(" ")])
         leftList = line[1].strip().split(" ")
         data_left.append(leftList)
         centreList = line[2].strip().split(" ")
