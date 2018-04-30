@@ -58,11 +58,11 @@ class Ranking_DSSMCNN(object):
             filter_shape = [filter_size, embedding_size, 1, num_filters]
             W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1),
                             name="W_filter-%s" % filter_size)  # W: [filter_height, filter_width, in_channels, out_channels], 与input对应
-            b = tf.Variable(tf.constant(0.01, shape=[num_filters]), name="b_filter-%s" % filter_size)
+            b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b_filter-%s" % filter_size)
             print(W, b)
             with tf.name_scope("conv-maxpool-left-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b))  # conv: [batch_size, 20-2+1, 1, out_channels]
+                h = tf.nn.relu(tf.nn.bias_add(conv, b))  # conv: [batch_size, 20-2+1, 1, out_channels]
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -71,7 +71,7 @@ class Ranking_DSSMCNN(object):
                 pooled_outputs_left.append(pooled)
             with tf.name_scope("conv-maxpool-right-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b))
+                h = tf.nn.relu(tf.nn.bias_add(conv, b))
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -80,7 +80,7 @@ class Ranking_DSSMCNN(object):
                 pooled_outputs_right.append(pooled)
             with tf.name_scope("conv-maxpool-centre-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_centre, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b))
+                h = tf.nn.relu(tf.nn.bias_add(conv, b))
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -101,7 +101,7 @@ class Ranking_DSSMCNN(object):
         W = tf.get_variable("W_hidden",
                             shape=[num_filters_total, num_hidden],
                             initializer=tf.contrib.layers.xavier_initializer())
-        b = tf.Variable(tf.constant(0.01, shape=[num_hidden]), name="b")
+        b = tf.Variable(tf.constant(0.1, shape=[num_hidden]), name="b")
         l2_loss += tf.nn.l2_loss(W)
         l2_loss += tf.nn.l2_loss(b)
 
