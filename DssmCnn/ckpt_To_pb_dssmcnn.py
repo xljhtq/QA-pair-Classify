@@ -5,7 +5,7 @@ import tensorflow as tf
 def freeze_graph(ckpt_dictionary):
     checkpoint = tf.train.get_checkpoint_state(ckpt_dictionary)  # 检查目录下ckpt文件状态是否可用
     input_checkpoint = checkpoint.model_checkpoint_path          # 得ckpt文件路径
-    print input_checkpoint
+    print (input_checkpoint)
     saver = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=True)  # 得到图、clear_devices ：Whether or not to clear the device field for an `Operation` or `Tensor` during import.
 
     with tf.Session() as sess:
