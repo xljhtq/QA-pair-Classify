@@ -264,7 +264,7 @@ if __name__ == '__main__':
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
     parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
     parser.add_argument("--l2_reg_lambda", type=float, default=1e-4, help="L2 regularizaion lambda")
-	parser.add_argument("--learning_rate", type=float, default=5e-4, help="L2 regularizaion lambda")
+    parser.add_argument("--learning_rate", type=float, default=5e-4, help="L2 regularizaion lambda")
     parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
     parser.add_argument("--log_device_placement", default=False, help="Log placement of ops on devices")
 
