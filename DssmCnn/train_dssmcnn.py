@@ -92,7 +92,7 @@ def main(_):
         session_conf = tf.ConfigProto(
             allow_soft_placement=FLAGS.allow_soft_placement,
             log_device_placement=FLAGS.log_device_placement)
-        session_conf.gpu_options.allow_growth=True
+        session_conf.gpu_options.allow_growth = True
         sess = tf.Session(config=session_conf)
         with sess.as_default():
             cnn = Ranking_DSSMCNN(
@@ -209,12 +209,13 @@ def main(_):
                     cnn.input_y: y_batch,
                     cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
-                _, current_step, loss, accuracy = sess.run([train_op, global_step, cnn.loss, cnn.accuracy],
-                                                           feed_dict)
+                _, current_step, loss, accuracy = sess.run(
+                    [train_op, global_step, cnn.loss, cnn.accuracy],
+                    feed_dict)
                 train_loss += loss
 
                 if current_step % 10000 == 0:
-                    print("step {}, loss {:g}, acc {:g}".format(current_step, loss, accuracy))
+                    print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
@@ -250,7 +251,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--wordvec_path", default="data/wordvec.vec", help="wordvec_path")
     parser.add_argument("--train_dir", default="/home/haojianyong/file_1/CNN/", help="Training dir root")
-    parser.add_argument("--train_path", default="data_dssm/total_shuf.txt", help="train path")
+    parser.add_argument("--train_path", default="data_dssm/train.txt", help="train path")
     parser.add_argument("--test_path", default="data_dssm/test.txt", help="test path")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
     parser.add_argument("--num_epochs", type=int, default=30, help="Number of training epochs (default: 200)")
@@ -264,7 +265,7 @@ if __name__ == '__main__':
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
     parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
     parser.add_argument("--l2_reg_lambda", type=float, default=1e-4, help="L2 regularizaion lambda")
-	parser.add_argument("--learning_rate", type=float, default=5e-4, help="L2 regularizaion lambda")
+    parser.add_argument("--learning_rate", type=float, default=1e-4, help="L2 regularizaion lambda")
     parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
     parser.add_argument("--log_device_placement", default=False, help="Log placement of ops on devices")
 
