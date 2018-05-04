@@ -11,6 +11,15 @@ class Ranking_DSSMCNN(object):
         return f1 * x + f2 * tf.abs(x)
 
     def general_loss(self, logits, labels):
+        # scores1 = tf.matmul(logits, tf.constant([1, -1], shape=[2, 1], dtype=tf.float32))
+        # scores2 = tf.matmul(logits, tf.constant([-1, 1], shape=[2, 1], dtype=tf.float32))
+        #
+        # labels1 = tf.matmul(labels, tf.constant([1, 0], shape=[2, 1], dtype=tf.float32))
+        # labels2 = 1 - labels1
+        #
+        # tmp = tf.multiply(labels2, tf.square(tf.maximum(1 + scores1, 0.0)))
+        # temp2 = tf.multiply(labels1, tf.square(tf.maximum(1 + scores2, 0.0)))
+        # sum = tmp + temp2
         scores = tf.matmul(logits, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
         labels2 = tf.matmul(labels, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
 
@@ -18,6 +27,16 @@ class Ranking_DSSMCNN(object):
         temp2 = tf.multiply(labels2, tf.square(tf.maximum(tf.subtract(1.0, scores), 0.0)))
         sum = tmp + temp2
         return sum
+
+    def batch_normalization(self, conv, num_filters):
+        scale = tf.Variable(tf.ones([num_filters]), name="scale")
+        offset = tf.Variable(tf.zeros([num_filters]), name="offset")
+        variance_epsilon = 0.001
+        axis = list(range(len(conv.get_shape()) - 1))
+        print("axis:", axis)
+        mean, variance = tf.nn.moments(conv, axis)
+        conv_BN = tf.nn.batch_normalization(conv, mean, variance, offset, scale, variance_epsilon)
+        return conv_BN
 
     def __init__(self, max_len,
                  vocab_size, embedding_size, filter_sizes,
@@ -58,20 +77,24 @@ class Ranking_DSSMCNN(object):
             filter_shape = [filter_size, embedding_size, 1, num_filters]
             self.WW = W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1),
                                       name="W_filter-%s" % filter_size)  # W: [filter_height, filter_width, in_channels, out_channels], 与input对应
-            b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b_filter-%s" % filter_size)
-            print(W, b)
+            print(W)
             with tf.name_scope("conv-maxpool-left-%s" % filter_size):
-                conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b))  # conv: [batch_size, 20-2+1, 1, out_channels]
+                conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID",
+                                    name="conv")  # conv: [batch_size, 20-2+1, 1, out_channels]
+                conv_BN = self.batch_normalization(conv, num_filters)
+                print(conv_BN)
+                h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
                                         padding='VALID',
                                         name="pool")  # pooled: [batch_size, 1, 1, out_channels]
                 pooled_outputs_left.append(pooled)
+
             with tf.name_scope("conv-maxpool-right-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b))
+                conv_BN = self.batch_normalization(conv, num_filters)
+                h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -80,7 +103,8 @@ class Ranking_DSSMCNN(object):
                 pooled_outputs_right.append(pooled)
             with tf.name_scope("conv-maxpool-centre-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_centre, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b))
+                conv_BN = self.batch_normalization(conv, num_filters)
+                h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -108,8 +132,9 @@ class Ranking_DSSMCNN(object):
         ######1. FC layer & dropout  ## tanh(), leaky relu()
         with tf.name_scope("hidden_dropout"):
             with tf.name_scope("hidden_left"):
-                self.hidden_output_left = self.leaky_relu(
-                    tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left"))
+                xw_plus_b = tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left")
+                xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
+                self.hidden_output_left = tf.nn.tanh(xw_plus_b_BN)
                 # self.hidden_output_left = tf.nn.tanh(tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left"))
             with tf.name_scope("dropout_left"):
                 self.h_drop_left = tf.nn.dropout(self.hidden_output_left, self.dropout_keep_prob,
@@ -117,16 +142,18 @@ class Ranking_DSSMCNN(object):
 
             ###2. FC layer & dropout
             with tf.name_scope("hidden_centre"):
-                self.hidden_output_centre = self.leaky_relu(
-                    tf.nn.xw_plus_b(self.h_pool_centre, W, b, name="hidden_output_centre"))
+                xw_plus_b = tf.nn.xw_plus_b(self.h_pool_centre, W, b, name="hidden_output_centre")
+                xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
+                self.hidden_output_centre = tf.nn.tanh(xw_plus_b_BN)
             with tf.name_scope("dropout_centre"):
                 self.h_drop_centre = tf.nn.dropout(self.hidden_output_centre, self.dropout_keep_prob,
                                                    name="hidden_output_drop_centre")
 
             ###3. FC layer & dropout
             with tf.name_scope("hidden_right"):
-                self.hidden_output_right = self.leaky_relu(
-                    tf.nn.xw_plus_b(self.h_pool_right, W, b, name="hidden_output_right"))
+                xw_plus_b = tf.nn.xw_plus_b(self.h_pool_right, W, b, name="hidden_output_right")
+                xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
+                self.hidden_output_right = tf.nn.tanh(xw_plus_b_BN)
             with tf.name_scope("dropout_right"):
                 self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,
                                                   name="hidden_output_drop_right")
@@ -140,7 +167,6 @@ class Ranking_DSSMCNN(object):
         #     # self.cosine_left = product / tf.multiply(abs_left, abs_centre)
         #     self.cosine_left = product / tf.maximum(tf.multiply(abs_left, abs_centre), epsilon)
         #     print(self.cosine_left)
-        #
         # with tf.name_scope("cosine_right"):
         #     product = tf.reduce_sum(tf.multiply(self.h_drop_right, self.h_drop_centre), 1)
         #     self.abs_right = abs_right = tf.sqrt(tf.reduce_sum(tf.square(self.h_drop_right), 1))
@@ -149,18 +175,20 @@ class Ranking_DSSMCNN(object):
         #     self.cosine_right = product / tf.maximum(tf.multiply(abs_right, abs_centre), epsilon)
         #     print(self.cosine_right)
 
-        # Softmax
+        # Compute L1 distance
         with tf.name_scope("left_L1"):
             h = tf.reduce_sum(tf.abs(self.h_drop_left - self.h_drop_centre), 1)
+            # self.left_l1 = tf.exp(tf.negative(h))
             self.left_l1 = tf.negative(h)
 
         with tf.name_scope("right_L1"):
             h = tf.reduce_sum(tf.abs(self.h_drop_right - self.h_drop_centre), 1)
+            # self.right_l1 = tf.exp(tf.negative(h))
             self.right_l1 = tf.negative(h)
             print(self.right_l1)
 
+        # Softmax
         with tf.name_scope("softmax"):
-            self.stack = tf.stack([self.left_l1, self.right_l1], axis=1)
             self.softmax_score = tf.nn.softmax(tf.stack([self.left_l1, self.right_l1], axis=1), name="score")
             print(self.softmax_score)
             self.predictions = tf.argmax(self.softmax_score, 1, name="predictions")
