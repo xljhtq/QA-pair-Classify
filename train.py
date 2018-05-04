@@ -90,6 +90,7 @@ def main(_):
         session_conf = tf.ConfigProto(
             allow_soft_placement=FLAGS.allow_soft_placement,
             log_device_placement=FLAGS.log_device_placement)
+        session_conf.gpu_options.allow_growth = True
         sess = tf.Session(config=session_conf)
         with sess.as_default():
             cnn = Ranking(
@@ -205,7 +206,7 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
-                if current_step % 100 == 0:
+                if current_step % 10000 == 0:
                     print("step {}, loss {:g}, acc {:g}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 

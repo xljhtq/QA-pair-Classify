@@ -58,7 +58,7 @@ class Ranking(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b-%s" %filter_size)
             with tf.name_scope("conv-maxpool-left-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b), name="relu")  # conv: [batch_size, 20-2+1, 1, out_channels]
+                h = self.leaky_relu(tf.nn.bias_add(conv, b))  # conv: [batch_size, 20-2+1, 1, out_channels]
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len_left - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
@@ -67,7 +67,7 @@ class Ranking(object):
                 pooled_outputs_left.append(pooled)
             with tf.name_scope("conv-maxpool-right-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                h = self.leaky_relu(tf.nn.bias_add(conv, b), name="relu")
+                h = self.leaky_relu(tf.nn.bias_add(conv, b))
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len_right - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
