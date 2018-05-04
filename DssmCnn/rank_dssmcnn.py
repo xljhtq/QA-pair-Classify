@@ -11,14 +11,21 @@ class Ranking_DSSMCNN(object):
         return f1 * x + f2 * tf.abs(x)
 
     def general_loss(self, logits, labels):
-        # Y=0: [1,0]
-        # Y=1: [0,1]
+        # scores1 = tf.matmul(logits, tf.constant([1, -1], shape=[2, 1], dtype=tf.float32))
+        # scores2 = tf.matmul(logits, tf.constant([-1, 1], shape=[2, 1], dtype=tf.float32))
+        #
+        # labels1 = tf.matmul(labels, tf.constant([1, 0], shape=[2, 1], dtype=tf.float32))
+        # labels2 = 1 - labels1
+        #
+        # tmp = tf.multiply(labels2, tf.square(tf.maximum(1 + scores1, 0.0)))
+        # temp2 = tf.multiply(labels1, tf.square(tf.maximum(1 + scores2, 0.0)))
+        # sum = tmp + temp2
         scores = tf.matmul(logits, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
         labels2 = tf.matmul(labels, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
 
         tmp = tf.multiply(tf.subtract(1.0, labels2), tf.square(scores))
         temp2 = tf.multiply(labels2, tf.square(tf.maximum(tf.subtract(1.0, scores), 0.0)))
-        sum = tf.add(tmp, temp2)
+        sum = tmp + temp2
         return sum
 
     def __init__(self, max_len,
@@ -132,7 +139,6 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("dropout_right"):
                 self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,
                                                   name="hidden_output_drop_right")
-
 
         # Compute cosine
         epsilon = 1e-5

@@ -108,7 +108,9 @@ def main(_):
 
             # Define Training procedure
             global_step = tf.Variable(0, name="global_step", trainable=False)
+            # optimizer = tf.train.GradientDescentOptimizer(FLAGS.learning_rate)
             optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate)
+            # optimizer = tf.train.AdadeltaOptimizer(FLAGS.learning_rate)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -214,7 +216,7 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
-                if current_step % 10000 == 0:
+                if current_step % 1000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
@@ -225,26 +227,26 @@ def main(_):
                     train_loss = 0
                     sys.stdout.flush()
 
-                if (current_step + 1) % num_batches_per_epoch == 0 or (
-                        current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
-                    print("\nEvaluation:")
-                    loss, accuracy = dev_whole(x_left_dev, x_centre_dev, x_right_dev, y_dev)
-                    dev_accuracy.append(accuracy)
-                    print("Recently accuracy:")
-                    print (dev_accuracy[-10:])
-                    print("Recently train_loss:")
-                    print(total_loss[-10:])
-                    if overfit(dev_accuracy):
-                        print ('Overfit!!')
-                        break
-                    print("")
-                    sys.stdout.flush()
-
-                if (current_step + 1) % num_batches_per_epoch == 0 or (
-                        current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
-                    path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                    print("Saved model checkpoint to {}\n".format(path))
-                    sys.stdout.flush()
+                # if (current_step + 1) % num_batches_per_epoch == 0 or (
+                #         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
+                #     print("\nEvaluation:")
+                #     loss, accuracy = dev_whole(x_left_dev, x_centre_dev, x_right_dev, y_dev)
+                #     dev_accuracy.append(accuracy)
+                #     print("Recently accuracy:")
+                #     print (dev_accuracy[-10:])
+                #     print("Recently train_loss:")
+                #     print(total_loss[-10:])
+                #     if overfit(dev_accuracy):
+                #         print ('Overfit!!')
+                #         break
+                #     print("")
+                #     sys.stdout.flush()
+                #
+                # if (current_step + 1) % num_batches_per_epoch == 0 or (
+                #         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
+                #     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                #     print("Saved model checkpoint to {}\n".format(path))
+                #     sys.stdout.flush()
 
 
 if __name__ == '__main__':
@@ -263,9 +265,9 @@ if __name__ == '__main__':
     parser.add_argument("--filter_sizes", default="2,3,4", help="Comma-separated filter sizes (default: '2,3')")
     parser.add_argument("--num_filters", type=int, default=100, help="Number of filters per filter size (default: 64)")
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
-    parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
+    parser.add_argument("--dropout_keep_prob", type=float, default=1.0, help="Dropout keep probability (default: 0.5)")
     parser.add_argument("--l2_reg_lambda", type=float, default=1e-4, help="L2 regularizaion lambda")
-    parser.add_argument("--learning_rate", type=float, default=1e-4, help="L2 regularizaion lambda")
+    parser.add_argument("--learning_rate", type=float, default=1e-2, help="L2 regularizaion lambda")
     parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
     parser.add_argument("--log_device_placement", default=False, help="Log placement of ops on devices")
 

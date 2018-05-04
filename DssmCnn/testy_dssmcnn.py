@@ -6,7 +6,6 @@ sys.setdefaultencoding('utf8')
 import tensorflow as tf
 from vocab_utils import Vocab
 import numpy as np
-import time
 
 max_len = 25
 root_dir = "/home/haojianyong/file_1/CNN/"
@@ -66,7 +65,7 @@ data_label = []
 data_left = []
 data_centre = []
 data_right = []
-line = "1 0\t大家 晚上 好\t晚上 好\t其他 的 没用\n"
+line = "0 1\t没有 通 过\t不 通 过\t通 过 了\n"
 # line="0 1\t替 我 变更 我 的 卡 额度 可以 吗\t修改 交易 密码\t我 想 改 一下 我 的 密码 刷卡 密码\n"
 line = line.strip().strip("\n").split("\t")
 data_label.append(map(int, line[0].split(" ")))
@@ -99,7 +98,7 @@ with g_graph.as_default():
         input_right = sess.graph.get_tensor_by_name("input_right:0")
         input_y = sess.graph.get_tensor_by_name("input_y:0")
         dropout_keep_prob = sess.graph.get_tensor_by_name("dropout_keep_prob:0")
-        cosine_left= sess.graph.get_tensor_by_name("cosine_left/div:0")
+        cosine_left = sess.graph.get_tensor_by_name("cosine_left/div:0")
         cosine_right = sess.graph.get_tensor_by_name("cosine_right/div:0")
         output_accuracy = sess.graph.get_tensor_by_name("accuracy/accuracy:0")
 
@@ -114,24 +113,21 @@ with g_graph.as_default():
             for idx, batch_dev in enumerate(batches_dev):
                 x_left_batch_dev, x_centre_batch_dev, x_right_batch_dev, y_batch_dev = zip(*batch_dev)
 
-                accuracy, softmax, cosine1, cosine2 = sess.run([output_accuracy, softmax_score,cosine_left,cosine_right],
-                                               feed_dict={input_left: x_left_batch_dev,
-                                                          input_centre:x_centre_batch_dev,
-                                                          input_right: x_right_batch_dev,
-                                                          input_y: y_batch_dev,
-                                                          dropout_keep_prob: 1.0
-                                                          })
+                cosine1, cosine2 = sess.run(
+                    [cosine_left, cosine_right],
+                    feed_dict={input_left: x_left_batch_dev,
+                               input_centre: x_centre_batch_dev,
+                               input_right: x_right_batch_dev,
+                               input_y: y_batch_dev,
+                               dropout_keep_prob: 1.0
+                               })
 
-                print("accuracy: ",accuracy)
                 for i in range(len(y_batch_dev)):
-                    p = softmax[i].tolist()
-                    y_label = y_batch_dev[i].tolist()
-                    if y_label[1] != [1 if p[1] >= 0.5 else 0][0]:
-                        result = str(y_label[1]) + "\t" + str(p[1]) + "\t" + " ".join(x1[i]) + "\t" + " ".join(
-                            x2[i]) + "\n"
-                        out_op.write(result)
-                    else:
-                        print("softmax: ",p)
-                        print("left: ",cosine1)
-                        print("right: ",cosine2)
-
+                    # y_label = y_batch_dev[i].tolist()
+                    # if y_label[1] != [1 if p[1] >= 0.5 else 0][0]:
+                    #     result = str(y_label[1]) + "\t" + str(p[1]) + "\t" + " ".join(x1[i]) + "\t" + " ".join(
+                    #         x2[i]) + "\n"
+                    #     out_op.write(result)
+                    # else:
+                    print("left: ", cosine1)
+                    print("right: ", cosine2)
