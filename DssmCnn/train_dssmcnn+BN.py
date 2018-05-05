@@ -215,7 +215,7 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
-                if current_step % 1000 == 0:
+                if current_step % 10000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
@@ -240,12 +240,12 @@ def main(_):
                         break
                     print("")
                     sys.stdout.flush()
-                #
-                # if (current_step + 1) % num_batches_per_epoch == 0 or (
-                #         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
-                #     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                #     print("Saved model checkpoint to {}\n".format(path))
-                #     sys.stdout.flush()
+
+                if (current_step + 1) % num_batches_per_epoch == 0 or (
+                        current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
+                    path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                    print("Saved model checkpoint to {}\n".format(path))
+                    sys.stdout.flush()
 
 
 if __name__ == '__main__':
