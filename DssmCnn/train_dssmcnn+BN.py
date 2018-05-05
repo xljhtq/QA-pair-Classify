@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_dssmcnn import Ranking_DSSMCNN
+from rank_dssmcnn_BN import Ranking_DSSMCNN
 from vocab_utils import Vocab
 
 
@@ -173,9 +173,8 @@ def main(_):
                         cnn.input_y: y_batch_dev,
                         cnn.dropout_keep_prob: 1.0
                     }
-                    step, loss, accuracy, softmax_score, left_l1, right_l1 = sess.run(
-                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score,
-                         cnn.left_l1, cnn.right_l1],
+                    step, loss, accuracy, softmax_score, left_l1, right_l1= sess.run(
+                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score, cnn.left_l1, cnn.right_l1],
                         feed_dict)
                     losses.append(loss)
                     accuracies.append(accuracy)
@@ -227,20 +226,20 @@ def main(_):
                     train_loss = 0
                     sys.stdout.flush()
 
-                # if (current_step + 1) % num_batches_per_epoch == 0 or (
-                #         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
-                #     print("\nEvaluation:")
-                #     loss, accuracy = dev_whole(x_left_dev, x_centre_dev, x_right_dev, y_dev)
-                #     dev_accuracy.append(accuracy)
-                #     print("Recently accuracy:")
-                #     print (dev_accuracy[-10:])
-                #     print("Recently train_loss:")
-                #     print(total_loss[-10:])
-                #     if overfit(dev_accuracy):
-                #         print ('Overfit!!')
-                #         break
-                #     print("")
-                #     sys.stdout.flush()
+                if (current_step + 1) % num_batches_per_epoch == 0 or (
+                        current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
+                    print("\nEvaluation:")
+                    loss, accuracy = dev_whole(x_left_dev, x_centre_dev, x_right_dev, y_dev)
+                    dev_accuracy.append(accuracy)
+                    print("Recently accuracy:")
+                    print (dev_accuracy[-10:])
+                    print("Recently train_loss:")
+                    print(total_loss[-10:])
+                    if overfit(dev_accuracy):
+                        print ('Overfit!!')
+                        break
+                    print("")
+                    sys.stdout.flush()
                 #
                 # if (current_step + 1) % num_batches_per_epoch == 0 or (
                 #         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
@@ -265,7 +264,7 @@ if __name__ == '__main__':
     parser.add_argument("--filter_sizes", default="2,3,4", help="Comma-separated filter sizes (default: '2,3')")
     parser.add_argument("--num_filters", type=int, default=100, help="Number of filters per filter size (default: 64)")
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
-    parser.add_argument("--dropout_keep_prob", type=float, default=1.0, help="Dropout keep probability (default: 0.5)")
+    parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")
     parser.add_argument("--l2_reg_lambda", type=float, default=1e-4, help="L2 regularizaion lambda")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="L2 regularizaion lambda")
     parser.add_argument("--allow_soft_placement", default=True, help="Allow device soft device placement")
