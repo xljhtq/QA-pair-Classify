@@ -134,7 +134,7 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("hidden_left"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left")
                 xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
-                self.hidden_output_left = tf.nn.tanh(xw_plus_b_BN)
+                self.hidden_output_left = self.leaky_relu(xw_plus_b_BN)
                 # self.hidden_output_left = tf.nn.tanh(tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left"))
             with tf.name_scope("dropout_left"):
                 self.h_drop_left = tf.nn.dropout(self.hidden_output_left, self.dropout_keep_prob,
@@ -144,7 +144,7 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("hidden_centre"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_centre, W, b, name="hidden_output_centre")
                 xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
-                self.hidden_output_centre = tf.nn.tanh(xw_plus_b_BN)
+                self.hidden_output_centre = self.leaky_relu(xw_plus_b_BN)
             with tf.name_scope("dropout_centre"):
                 self.h_drop_centre = tf.nn.dropout(self.hidden_output_centre, self.dropout_keep_prob,
                                                    name="hidden_output_drop_centre")
@@ -153,7 +153,7 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("hidden_right"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_right, W, b, name="hidden_output_right")
                 xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
-                self.hidden_output_right = tf.nn.tanh(xw_plus_b_BN)
+                self.hidden_output_right = self.leaky_relu(xw_plus_b_BN)
             with tf.name_scope("dropout_right"):
                 self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,
                                                   name="hidden_output_drop_right")
