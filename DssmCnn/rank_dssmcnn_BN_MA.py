@@ -11,15 +11,6 @@ class Ranking_DSSMCNN(object):
         return f1 * x + f2 * tf.abs(x)
 
     def general_loss(self, logits, labels):
-        # scores1 = tf.matmul(logits, tf.constant([1, -1], shape=[2, 1], dtype=tf.float32))
-        # scores2 = tf.matmul(logits, tf.constant([-1, 1], shape=[2, 1], dtype=tf.float32))
-        #
-        # labels1 = tf.matmul(labels, tf.constant([1, 0], shape=[2, 1], dtype=tf.float32))
-        # labels2 = 1 - labels1
-        #
-        # tmp = tf.multiply(labels2, tf.square(tf.maximum(1 + scores1, 0.0)))
-        # temp2 = tf.multiply(labels1, tf.square(tf.maximum(1 + scores2, 0.0)))
-        # sum = tmp + temp2
         scores = tf.matmul(logits, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
         labels2 = tf.matmul(labels, tf.constant([0, 1], shape=[2, 1], dtype=tf.float32))
 
@@ -28,37 +19,37 @@ class Ranking_DSSMCNN(object):
         sum = tmp + temp2
         return sum
 
-    def batch_normalization(self, conv, num_filters):
-        scale = tf.Variable(tf.ones([num_filters]), name="scale")
-        offset = tf.Variable(tf.zeros([num_filters]), name="offset")
-        variance_epsilon = 0.001
-        axis = list(range(len(conv.get_shape()) - 1))
-        print("axis:", axis)
-        mean, variance = tf.nn.moments(conv, axis)
-        conv_BN = tf.nn.batch_normalization(conv, mean, variance, offset, scale, variance_epsilon)
-        return conv_BN
+    # def batch_normalization(self, conv, num_filters):
+    #     scale = tf.Variable(tf.ones([num_filters]), name="scale")
+    #     offset = tf.Variable(tf.zeros([num_filters]), name="offset")
+    #     variance_epsilon = 0.001
+    #     axis = list(range(len(conv.get_shape()) - 1))
+    #     print("axis:", axis)
+    #     mean, variance = tf.nn.moments(conv, axis)
+    #     conv_BN = tf.nn.batch_normalization(conv, mean, variance, offset, scale, variance_epsilon)
+    #     return conv_BN
 
-    # def batch_normalization(self, conv, num_filters, need_test=True):
-    #     beta = tf.Variable(tf.ones(num_filters), name='beta')
-    #     offset = tf.Variable(tf.zeros(num_filters), name='offset')
-    #     bnepsilon = 1e-5
-    #     axis = list(range(len(conv.shape) - 1))
-    #     batch_mean, batch_var = tf.nn.moments(conv, axis)
-    #
-    #     ema = tf.train.ExponentialMovingAverage(0.99)
-    #     update_ema = ema.apply([batch_mean, batch_var])
-    #
-    #     def mean_var_with_update(batch_mean, batch_var):
-    #         with tf.control_dependencies([update_ema]):
-    #             return tf.identity(batch_mean), tf.identity(batch_var)
-    #
-    #     mean, var = tf.cond(tf.equal(need_test, True),
-    #                         lambda: mean_var_with_update(ema.average(batch_mean), ema.average(batch_var)),
-    #                         lambda: (batch_mean, batch_var))
-    #
-    #     Ybn = tf.nn.batch_normalization(conv, mean, var, offset, beta, bnepsilon)
-    #
-    #     return Ybn, mean
+    def batch_normalization(self, conv, num_filters, need_test=True):
+        beta = tf.Variable(tf.ones(num_filters), name='beta')
+        offset = tf.Variable(tf.zeros(num_filters), name='offset')
+        bnepsilon = 1e-5
+        axis = list(range(len(conv.shape) - 1))
+        batch_mean, batch_var = tf.nn.moments(conv, axis)
+
+        ema = tf.train.ExponentialMovingAverage(0.99)
+        update_ema = ema.apply([batch_mean, batch_var])
+
+        def mean_var_with_update(batch_mean, batch_var):
+            with tf.control_dependencies([update_ema]):
+                return tf.identity(batch_mean), tf.identity(batch_var)
+
+        mean, var = tf.cond(tf.equal(need_test, True),
+                            lambda: mean_var_with_update(ema.average(batch_mean), ema.average(batch_var)),
+                            lambda: (batch_mean, batch_var))
+
+        Ybn = tf.nn.batch_normalization(conv, mean, var, offset, beta, bnepsilon)
+
+        return Ybn, mean
 
     def __init__(self, max_len,
                  vocab_size, embedding_size, filter_sizes,
@@ -104,8 +95,8 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("conv-maxpool-left-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID",
                                     name="conv")  # conv: [batch_size, 20-2+1, 1, out_channels]
-                # conv_BN, mean = self.batch_normalization(conv, num_filters)
-                conv_BN = self.batch_normalization(conv, num_filters)
+                conv_BN, mean = self.batch_normalization(conv, num_filters)
+                print(mean)
                 h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
@@ -116,8 +107,7 @@ class Ranking_DSSMCNN(object):
 
             with tf.name_scope("conv-maxpool-right-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                # conv_BN, mean = self.batch_normalization(conv, num_filters)
-                conv_BN = self.batch_normalization(conv, num_filters)
+                conv_BN, mean = self.batch_normalization(conv, num_filters)
                 h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
@@ -127,8 +117,7 @@ class Ranking_DSSMCNN(object):
                 pooled_outputs_right.append(pooled)
             with tf.name_scope("conv-maxpool-centre-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_centre, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
-                # conv_BN, mean = self.batch_normalization(conv, num_filters)
-                conv_BN = self.batch_normalization(conv, num_filters)
+                conv_BN, mean = self.batch_normalization(conv, num_filters)
                 h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
@@ -158,8 +147,7 @@ class Ranking_DSSMCNN(object):
         with tf.name_scope("hidden_dropout"):
             with tf.name_scope("hidden_left"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left")
-                # xw_plus_b_BN, mean = self.batch_normalization(xw_plus_b, num_hidden)
-                xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
+                xw_plus_b_BN, mean = self.batch_normalization(xw_plus_b, num_hidden)
                 self.hidden_output_left = tf.nn.tanh(xw_plus_b_BN)
                 # self.hidden_output_left = tf.nn.tanh(tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left"))
             with tf.name_scope("dropout_left"):
@@ -169,8 +157,7 @@ class Ranking_DSSMCNN(object):
             ###2. FC layer & dropout
             with tf.name_scope("hidden_centre"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_centre, W, b, name="hidden_output_centre")
-                # xw_plus_b_BN, mean = self.batch_normalization(xw_plus_b, num_hidden)
-                xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
+                xw_plus_b_BN, mean = self.batch_normalization(xw_plus_b, num_hidden)
                 self.hidden_output_centre = tf.nn.tanh(xw_plus_b_BN)
             with tf.name_scope("dropout_centre"):
                 self.h_drop_centre = tf.nn.dropout(self.hidden_output_centre, self.dropout_keep_prob,
@@ -179,8 +166,7 @@ class Ranking_DSSMCNN(object):
             ###3. FC layer & dropout
             with tf.name_scope("hidden_right"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_right, W, b, name="hidden_output_right")
-                # xw_plus_b_BN, mean = self.batch_normalization(xw_plus_b, num_hidden)
-                xw_plus_b_BN = self.batch_normalization(xw_plus_b, num_hidden)
+                xw_plus_b_BN, mean = self.batch_normalization(xw_plus_b, num_hidden)
                 self.hidden_output_right = tf.nn.tanh(xw_plus_b_BN)
             with tf.name_scope("dropout_right"):
                 self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,

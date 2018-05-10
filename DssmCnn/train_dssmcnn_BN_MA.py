@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_dssmcnn_BN import Ranking_DSSMCNN
+from rank_dssmcnn_BN_MA import Ranking_DSSMCNN
 from vocab_utils import Vocab
 
 
@@ -215,6 +215,7 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
+
                 if current_step % 10000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
@@ -261,7 +262,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--embedding_dim", type=int, default=128,
                         help="Dimensionality of character embedding (default: 64)")
-    parser.add_argument("--filter_sizes", default="2,3,4", help="Comma-separated filter sizes (default: '2,3')")
+    parser.add_argument("--filter_sizes", default="2,3,4,5", help="Comma-separated filter sizes (default: '2,3')")
     parser.add_argument("--num_filters", type=int, default=100, help="Number of filters per filter size (default: 64)")
     parser.add_argument("--num_hidden", type=int, default=100, help="Number of hidden layer units (default: 100)")
     parser.add_argument("--dropout_keep_prob", type=float, default=0.5, help="Dropout keep probability (default: 0.5)")

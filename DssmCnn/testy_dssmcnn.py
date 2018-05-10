@@ -65,13 +65,13 @@ data_label = []
 data_left = []
 data_centre = []
 data_right = []
-line = "0 1\t没有 通 过\t不 通 过\t通 过 了\n"
-# line="0 1\t替 我 变更 我 的 卡 额度 可以 吗\t修改 交易 密码\t我 想 改 一下 我 的 密码 刷卡 密码\n"
-line = line.strip().strip("\n").split("\t")
-data_label.append(map(int, line[0].split(" ")))
-data_left.append(line[1].strip().split(" "))
-data_centre.append(line[2].strip().split(" "))
-data_right.append(line[3].strip().split(" "))
+# line = "0 1\t没有 通 过\t不 通 过\t通 过 了\n"
+for line in open(root_dir + "data_dssm/tt.txt"):
+    line = line.strip().strip("\n").split("\t")
+    data_label.append(map(int, line[0].split(" ")))
+    data_left.append(line[1].strip().split(" "))
+    data_centre.append(line[2].strip().split(" "))
+    data_right.append(line[3].strip().split(" "))
 x1 = data_left
 x2 = data_centre
 x3 = data_right
@@ -88,6 +88,17 @@ with g_graph.as_default():
     with tf.gfile.GFile(root_dir + 'runs/model_cnn_dssm.pb', "rb") as f:
         graph_def = tf.GraphDef()  # 先创建一个空的图
         graph_def.ParseFromString(f.read())  # 加载proto-buf中的模型
+        # fix nodes
+        for node in graph_def.node:
+            if node.op == 'RefSwitch':
+                node.op = 'Switch'
+                for index in xrange(len(node.input)):
+                    if 'moving_' in node.input[index]:
+                        node.input[index] = node.input[index] + '/read'
+            elif node.op == 'AssignSub':
+                node.op = 'Sub'
+                if 'use_locking' in node.attr: del node.attr['use_locking']
+
         tf.import_graph_def(graph_def, name='')  # 最后复制pre-def图的到默认图中
 
     with tf.Session() as sess:
@@ -100,6 +111,7 @@ with g_graph.as_default():
         dropout_keep_prob = sess.graph.get_tensor_by_name("dropout_keep_prob:0")
         cosine_left = sess.graph.get_tensor_by_name("cosine_left/div:0")
         cosine_right = sess.graph.get_tensor_by_name("cosine_right/div:0")
+        layer1_mean=sess.graph.get_tensor_by_name("conv-maxpool-left-2/cond/Merge:0")
         output_accuracy = sess.graph.get_tensor_by_name("accuracy/accuracy:0")
 
         softmax_score = sess.graph.get_tensor_by_name("softmax/score:0")
@@ -113,8 +125,8 @@ with g_graph.as_default():
             for idx, batch_dev in enumerate(batches_dev):
                 x_left_batch_dev, x_centre_batch_dev, x_right_batch_dev, y_batch_dev = zip(*batch_dev)
 
-                cosine1, cosine2 = sess.run(
-                    [cosine_left, cosine_right],
+                cosine1, cosine2, curracy, mean = sess.run(
+                    [cosine_left, cosine_right, output_accuracy, layer1_mean],
                     feed_dict={input_left: x_left_batch_dev,
                                input_centre: x_centre_batch_dev,
                                input_right: x_right_batch_dev,
@@ -122,12 +134,20 @@ with g_graph.as_default():
                                dropout_keep_prob: 1.0
                                })
 
-                for i in range(len(y_batch_dev)):
-                    # y_label = y_batch_dev[i].tolist()
-                    # if y_label[1] != [1 if p[1] >= 0.5 else 0][0]:
-                    #     result = str(y_label[1]) + "\t" + str(p[1]) + "\t" + " ".join(x1[i]) + "\t" + " ".join(
-                    #         x2[i]) + "\n"
-                    #     out_op.write(result)
-                    # else:
-                    print("left: ", cosine1)
-                    print("right: ", cosine2)
+                # for i in range(len(y_batch_dev)):
+                #     # y_label = y_batch_dev[i].tolist()
+                #     # if y_label[1] != [1 if p[1] >= 0.5 else 0][0]:
+                #     #     result = str(y_label[1]) + "\t" + str(p[1]) + "\t" + " ".join(x1[i]) + "\t" + " ".join(
+                #     #         x2[i]) + "\n"
+                #     #     out_op.write(result)
+                #     # else:
+                #     print("left: ", cosine1[i])
+                #     print("right: ", cosine2[i])
+                print("left: ")
+                print(cosine1)
+                print("right: ")
+                print(cosine2)
+                print("curracy")
+                print(curracy)
+
+                print(mean)
