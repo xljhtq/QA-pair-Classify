@@ -11,7 +11,7 @@ def freeze_graph(ckpt_dictionary):
     with tf.Session() as sess:
         saver.restore(sess, input_checkpoint)  # 恢复图并得到数据
 
-        output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_node_names=['accuracy/accuracy','softmax/score'])
+        output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def, output_node_names=['accuracy/accuracy','softmax/score','cosine_left/div','cosine_right/div'])
         with tf.gfile.GFile("/home/haojianyong/file_1/CNN/runs/model_cnn_dssm.pb", "wb") as f:  # 保存模型
             f.write(output_graph_def.SerializeToString())  # 序列化输出
         print("%d ops in the final graph." % len(output_graph_def.node))  # 得到当前图有几个操作节点

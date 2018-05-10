@@ -173,13 +173,13 @@ def main(_):
                         cnn.input_y: y_batch_dev,
                         cnn.dropout_keep_prob: 1.0
                     }
-                    step, loss, accuracy, softmax_score, left_l1, right_l1= sess.run(
-                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score, cnn.left_l1, cnn.right_l1],
+                    step, loss, accuracy, softmax_score, left, right = sess.run(
+                        [global_step, cnn.loss, cnn.accuracy, cnn.softmax_score, cnn.cosine_left, cnn.cosine_right],
                         feed_dict)
                     losses.append(loss)
                     accuracies.append(accuracy)
-                print("left_l1: ", left_l1)
-                print("right_l1: ", right_l1)
+                print("left_cosine: ", left)
+                print("right_cosine: ", right)
                 return np.mean(np.array(losses)), np.mean(np.array(accuracies))
 
             def overfit(dev_loss):
@@ -195,7 +195,7 @@ def main(_):
             batches_epochs, num_batches_per_epoch = batch_iter(
                 list(zip(x_left_train, x_centre_train, x_right_train, y_train_label)),
                 FLAGS.batch_size,
-                FLAGS.num_epochs)
+                FLAGS.num_epochs, shuffle=False)
 
             print(num_batches_per_epoch)
             dev_accuracy = []
@@ -214,6 +214,11 @@ def main(_):
                     [train_op, global_step, cnn.loss, cnn.accuracy],
                     feed_dict)
                 train_loss += loss
+
+                # if current_step==1:
+                #     print(mean1)
+                #     print("-----------------")
+                #     print(mean2)
 
                 if current_step % 10000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
@@ -255,7 +260,7 @@ if __name__ == '__main__':
     parser.add_argument("--train_path", default="data_dssm/train.txt", help="train path")
     parser.add_argument("--test_path", default="data_dssm/test.txt", help="test path")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
-    parser.add_argument("--num_epochs", type=int, default=30, help="Number of training epochs (default: 200)")
+    parser.add_argument("--num_epochs", type=int, default=50, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
     parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 

@@ -131,7 +131,7 @@ class Ranking_DSSMCNN(object):
                 self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,
                                                   name="hidden_output_drop_right")
 
-        # Compute cosine
+        # # Compute cosine
         # epsilon = 1e-5
         # with tf.name_scope("cosine_left"):
         #     product = tf.reduce_sum(tf.multiply(self.h_drop_left, self.h_drop_centre), 1)
@@ -158,6 +158,21 @@ class Ranking_DSSMCNN(object):
             h = tf.reduce_sum(tf.abs(self.h_drop_right - self.h_drop_centre), 1)
             self.right_l1 = tf.negative(h)
             print(self.right_l1)
+
+        with tf.name_scope("cosine_left"):
+            product = tf.reduce_sum(tf.multiply(self.h_drop_left, self.h_drop_centre), 1)
+            abs_left = tf.sqrt(tf.reduce_sum(tf.square(self.h_drop_left), 1))
+            abs_centre = tf.sqrt(tf.reduce_sum(tf.square(self.h_drop_centre), 1))
+            self.cosine_left = product / tf.multiply(abs_left, abs_centre)
+            # self.cosine_left = product / tf.maximum(tf.multiply(abs_left, abs_centre), epsilon)
+            print(self.cosine_left)
+        with tf.name_scope("cosine_right"):
+            product = tf.reduce_sum(tf.multiply(self.h_drop_right, self.h_drop_centre), 1)
+            abs_right = tf.sqrt(tf.reduce_sum(tf.square(self.h_drop_right), 1))
+            abs_centre = tf.sqrt(tf.reduce_sum(tf.square(self.h_drop_centre), 1))
+            self.cosine_right = product / tf.multiply(abs_right, abs_centre)
+            # self.cosine_right = product / tf.maximum(tf.multiply(abs_right, abs_centre), epsilon)
+            print(self.cosine_right)
 
         with tf.name_scope("softmax"):
             self.stack = tf.stack([self.left_l1, self.right_l1], axis=1)
