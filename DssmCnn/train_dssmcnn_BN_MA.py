@@ -215,7 +215,6 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
-
                 if current_step % 10000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
@@ -244,9 +243,30 @@ def main(_):
 
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
                         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
+
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))
                     sys.stdout.flush()
+
+                    output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
+                                                                                    output_node_names=[
+                                                                                        'accuracy/accuracy',
+                                                                                        'softmax/score',
+                                                                                        'cosine_left/div',
+                                                                                        'cosine_right/div'])
+                    for node in output_graph_def.node:
+                        if node.op == 'RefSwitch':
+                            node.op = 'Switch'
+                            for index in xrange(len(node.input)):
+                                if 'moving_' in node.input[index]:
+                                    node.input[index] = node.input[index] + '/read'
+                        elif node.op == 'AssignSub':
+                            node.op = 'Sub'
+                            if 'use_locking' in node.attr: del node.attr['use_locking']
+                    with tf.gfile.GFile("/home/haojianyong/file_1/CNN/runs/model_cnn_dssm_again.pb", "wb") as f:
+                        f.write(output_graph_def.SerializeToString())
+                    print("%d ops in the final graph." % len(output_graph_def.node))
+
 
 
 if __name__ == '__main__':
