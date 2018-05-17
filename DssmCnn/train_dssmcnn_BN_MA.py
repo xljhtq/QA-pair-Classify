@@ -263,7 +263,7 @@ def main(_):
                         elif node.op == 'AssignSub':
                             node.op = 'Sub'
                             if 'use_locking' in node.attr: del node.attr['use_locking']
-                    with tf.gfile.GFile("/home/haojianyong/file_1/CNN/runs/model_cnn_dssm_again.pb", "wb") as f:
+                    with tf.gfile.GFile(FLAGS.train_dir+"runs/model_cnn_dssm_again.pb", "wb") as f:
                         f.write(output_graph_def.SerializeToString())
                     print("%d ops in the final graph." % len(output_graph_def.node))
 
