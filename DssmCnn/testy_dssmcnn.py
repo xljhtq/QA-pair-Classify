@@ -8,7 +8,7 @@ from vocab_utils import Vocab
 import numpy as np
 
 max_len = 25
-root_dir = "/home/haojianyong/file_1/CNN/"
+root_dir = "/home/haojianyong/file_1/CNN/training_models/nj_1/"
 
 
 def pad_sentences(sentences, sequence_length, padding_word="<PAD/>"):
@@ -85,7 +85,7 @@ x_left_dev, x_centre_dev, x_right_dev, y_dev = build_input_data(data_left, data_
 
 g_graph = tf.Graph()
 with g_graph.as_default():
-    with tf.gfile.GFile(root_dir + 'runs/model_cnn_dssm_again.pb', "rb") as f:
+    with tf.gfile.GFile(root_dir + 'model_cnn_dssm.pb', "rb") as f:
         graph_def = tf.GraphDef()  # 先创建一个空的图
         graph_def.ParseFromString(f.read())  # 加载proto-buf中的模型
         tf.import_graph_def(graph_def, name='')  # 最后复制pre-def图的到默认图中
@@ -112,7 +112,7 @@ with g_graph.as_default():
         # h_drop_centre = sess.graph.get_tensor_by_name("hidden_dropout/dropout_centre/hidden_output_drop_centre/mul:0")
         # h_drop_left = sess.graph.get_tensor_by_name("hidden_dropout/dropout_left/hidden_output_drop_left/mul:0")
 
-        with open("/home/haojianyong/file_1/CNN/" + "data_dssm/result_nonmatch2.txt", "w") as out_op:
+        with open("/home/haojianyong/file_1/CNN/" + "data_dssm/result_nonmatch.txt", "w") as out_op:
             batches_dev, _ = batch_iter(list(zip(x_left_dev, x_centre_dev, x_right_dev, y_dev)), 64, num_epochs=1,
                                         shuffle=False)
 

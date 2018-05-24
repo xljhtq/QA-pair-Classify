@@ -10,32 +10,24 @@ from rank_dssmcnn_BN_MA import Ranking_DSSMCNN
 from vocab_utils import Vocab
 
 
-def pad_sentences(sentences, sequence_length, padding_word="<PAD/>"):
-    padded_sentences = []
-    for i in range(len(sentences)):
-        sentence = sentences[i]
-        if len(sentence) < sequence_length:
-            num_padding = sequence_length - len(sentence)
-            new_sentence = sentence + [padding_word] * num_padding
-        else:
-            new_sentence = sentence[:sequence_length]
-        padded_sentences.append(new_sentence)
-    return padded_sentences
+def pad_sentence(sentence, sequence_length, padding_word="<PAD/>"):
+    if len(sentence) < sequence_length:
+        num_padding = sequence_length - len(sentence)
+        new_sentence = sentence + [padding_word] * num_padding
+    else:
+        new_sentence = sentence[:sequence_length]
+    return new_sentence
 
 
-def build_input_data(data_left, data_centre, data_right, label, vocab):
+def build_input_data(data, vocab):
     vocabset = set(vocab.keys())
-    out_left = np.array(
-        [[vocab[word] if word in vocabset else vocab['<UNK/>'] for word in sentence] for sentence in data_left])
-    out_centre = np.array(
-        [[vocab[word] if word in vocabset else vocab['<UNK/>'] for word in sentence] for sentence in data_centre])
-    out_right = np.array(
-        [[vocab[word] if word in vocabset else vocab['<UNK/>'] for word in sentence] for sentence in data_right])
-    out_y = np.array(label)
-    return [out_left, out_centre, out_right, out_y]
+    out_data = [vocab[word] if word in vocabset else vocab['<UNK/>'] for word in data]
+    return out_data
 
 
 def load_data(filepath, vocab_tuple=None):
+    vocab, vocab_inv = vocab_tuple
+
     data_label = []
     data_left = []
     data_centre = []
@@ -45,12 +37,22 @@ def load_data(filepath, vocab_tuple=None):
         line = line.strip().strip("\n").split("\t")
         if len(line) != 4: continue
         data_label.append([int(x) for x in line[0].split(" ")])
+
         leftList = line[1].strip().split(" ")
-        data_left.append(leftList)
+        leftSentence=pad_sentence(leftList,FLAGS.max_len)
+        out_left = build_input_data(leftSentence,vocab)
+        data_left.append(out_left)
+
         centreList = line[2].strip().split(" ")
-        data_centre.append(centreList)
+        centreSentence = pad_sentence(centreList, FLAGS.max_len)
+        out_centre = build_input_data(centreSentence, vocab)
+        data_centre.append(out_centre)
+
         rightLsit = line[3].strip().split(" ")
-        data_right.append(rightLsit)
+        rightSentence = pad_sentence(rightLsit, FLAGS.max_len)
+        out_right = build_input_data(rightSentence, vocab)
+        data_right.append(out_right)
+
         for word in leftList:
             if word not in dic:
                 dic[word] = 1
@@ -61,15 +63,11 @@ def load_data(filepath, vocab_tuple=None):
             if word not in dic:
                 dic[word] = 1
     print("word dic length: ", len(dic))
-    data_left = pad_sentences(data_left, FLAGS.max_len)
-    data_centre = pad_sentences(data_centre, FLAGS.max_len)
-    data_right = pad_sentences(data_right, FLAGS.max_len)
-
-    vocab, vocab_inv = vocab_tuple
-
-    data_left, data_centre, data_right, data_label = build_input_data(data_left, data_centre, data_right, data_label,
-                                                                      vocab)
-    return data_left, data_centre, data_right, data_label, vocab, vocab_inv
+    data_left=np.array(data_left)
+    data_centre = np.array(data_centre)
+    data_right = np.array(data_right)
+    out_y = np.array(data_label)
+    return data_left, data_centre, data_right, out_y, vocab, vocab_inv
 
 
 def main(_):
@@ -108,9 +106,7 @@ def main(_):
 
             # Define Training procedure
             global_step = tf.Variable(0, name="global_step", trainable=False)
-            # optimizer = tf.train.GradientDescentOptimizer(FLAGS.learning_rate)
             optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate)
-            # optimizer = tf.train.AdadeltaOptimizer(FLAGS.learning_rate)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
