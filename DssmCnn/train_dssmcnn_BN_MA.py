@@ -19,15 +19,14 @@ def pad_sentence(sentence, sequence_length, padding_word="<PAD/>"):
     return new_sentence
 
 
-def build_input_data(data, vocab):
-    vocabset = set(vocab.keys())
+def build_input_data(data, vocab, vocabset):
     out_data = [vocab[word] if word in vocabset else vocab['<UNK/>'] for word in data]
     return out_data
 
 
 def load_data(filepath, vocab_tuple=None):
     vocab, vocab_inv = vocab_tuple
-
+    vocabset = set(vocab.keys())
     data_label = []
     data_left = []
     data_centre = []
@@ -39,18 +38,18 @@ def load_data(filepath, vocab_tuple=None):
         data_label.append([int(x) for x in line[0].split(" ")])
 
         leftList = line[1].strip().split(" ")
-        leftSentence=pad_sentence(leftList,FLAGS.max_len)
-        out_left = build_input_data(leftSentence,vocab)
+        leftSentence = pad_sentence(leftList, FLAGS.max_len)
+        out_left = build_input_data(leftSentence, vocab, vocabset)
         data_left.append(out_left)
 
         centreList = line[2].strip().split(" ")
         centreSentence = pad_sentence(centreList, FLAGS.max_len)
-        out_centre = build_input_data(centreSentence, vocab)
+        out_centre = build_input_data(centreSentence, vocab, vocabset)
         data_centre.append(out_centre)
 
         rightLsit = line[3].strip().split(" ")
         rightSentence = pad_sentence(rightLsit, FLAGS.max_len)
-        out_right = build_input_data(rightSentence, vocab)
+        out_right = build_input_data(rightSentence, vocab, vocabset)
         data_right.append(out_right)
 
         for word in leftList:
@@ -63,7 +62,7 @@ def load_data(filepath, vocab_tuple=None):
             if word not in dic:
                 dic[word] = 1
     print("word dic length: ", len(dic))
-    data_left=np.array(data_left)
+    data_left = np.array(data_left)
     data_centre = np.array(data_centre)
     data_right = np.array(data_right)
     out_y = np.array(data_label)
@@ -211,7 +210,7 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
-                if current_step % 10000 == 0:
+                if current_step % 1000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
@@ -259,10 +258,9 @@ def main(_):
                         elif node.op == 'AssignSub':
                             node.op = 'Sub'
                             if 'use_locking' in node.attr: del node.attr['use_locking']
-                    with tf.gfile.GFile(FLAGS.train_dir+"runs/model_cnn_dssm_again.pb", "wb") as f:
+                    with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm.pb", "wb") as f:
                         f.write(output_graph_def.SerializeToString())
                     print("%d ops in the final graph." % len(output_graph_def.node))
-
 
 
 if __name__ == '__main__':
