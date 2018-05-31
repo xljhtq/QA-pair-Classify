@@ -211,7 +211,7 @@ def main(_):
                     feed_dict)
                 train_loss += loss
 
-                if current_step % 1000 == 0:
+                if current_step % 10000 == 0:
                     print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                     sys.stdout.flush()
 
@@ -222,7 +222,6 @@ def main(_):
                     train_loss = 0
                     sys.stdout.flush()
 
-                continue
                 if (current_step + 1) % num_batches_per_epoch == 0 or (
                         current_step + 1) == num_batches_per_epoch * FLAGS.num_epochs:
                     print("\nEvaluation:")
