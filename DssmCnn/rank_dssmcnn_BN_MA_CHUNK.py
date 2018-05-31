@@ -58,6 +58,7 @@ class Ranking_DSSMCNN(object):
                  l2_reg_lambda=0.0):
 
         # Placeholders for input, output and dropout
+        # self.batch_size=tf.placeholder(tf.int32, [None, max_len], name="input_left")
         self.input_left = tf.placeholder(tf.int32, [None, max_len], name="input_left")
         self.input_centre = tf.placeholder(tf.int32, [None, max_len], name="input_centre")
         self.input_right = tf.placeholder(tf.int32, [None, max_len], name="input_right")
@@ -100,9 +101,12 @@ class Ranking_DSSMCNN(object):
                 h_i_List = []
                 for i in range(C):
                     if i == C - 1:
-                        h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, b - i * int(b / C), c, d]))
+                        h_i_List.append(
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, b / C, c, d]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
+
+                print(h_i_List)
                 h_outputs = []
                 for h0 in h_i_List:
                     if h0 == h_i_List[-1]:
@@ -135,9 +139,10 @@ class Ranking_DSSMCNN(object):
                 h_i_List = []
                 for i in range(C):
                     if i == C - 1:
-                        h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, b - i * int(b / C), c, d]))
+                        h_i_List.append(
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, (b / C), c, d]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
@@ -164,16 +169,16 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("conv-maxpool-centre-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_centre, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
                 conv_BN = self.batch_same(conv, mean, var, beta, offset)
-                print(mean)
                 h = tf.nn.tanh(conv_BN)
 
                 (_, b, c, d) = h.shape
                 h_i_List = []
                 for i in range(C):
                     if i == C - 1:
-                        h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, b - i * int(b / C), c, d]))
+                        h_i_List.append(
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, b / C, c, d]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
