@@ -127,7 +127,7 @@ class Ranking_DSSMCNN(object):
                 self.h_outputs = h_outputs
                 self.h_stack_left = h_stack_left = tf.stack(values=h_outputs, axis=4)
                 (a, b, c, d, e) = h_stack_left.shape
-                self.h_reshape_left = h_reshape_left = tf.reshape(h_stack_left, [-1, 1, 1, d * e])
+                self.h_reshape_left = h_reshape_left = tf.reshape(h_stack_left, [-1, 1, 1, int(d * e)])
                 pooled_outputs_left.append(h_reshape_left)
 
             with tf.name_scope("conv-maxpool-right-%s" % filter_size):
@@ -163,7 +163,7 @@ class Ranking_DSSMCNN(object):
 
                 h_stack_right = tf.stack(values=h_outputs, axis=4)
                 (a, b, c, d, e) = h_stack_right.shape
-                h_reshape_right = tf.reshape(h_stack_right, [-1, 1, 1, d * e])
+                h_reshape_right = tf.reshape(h_stack_right, [-1, 1, 1, int(d * e)])
                 pooled_outputs_right.append(h_reshape_right)
 
             with tf.name_scope("conv-maxpool-centre-%s" % filter_size):
@@ -199,7 +199,7 @@ class Ranking_DSSMCNN(object):
 
                 h_stack_centre = tf.stack(values=h_outputs, axis=4)
                 (a, b, c, d, e) = h_stack_centre.shape
-                h_reshape_centre = tf.reshape(h_stack_centre, [-1, 1, 1, d * e])
+                h_reshape_centre = tf.reshape(h_stack_centre, [-1, 1, 1, int(d * e)])
                 pooled_outputs_centre.append(h_reshape_centre)
 
         ##### Combine all the pooled features [batch_size,num_filters_total]
