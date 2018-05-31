@@ -106,7 +106,6 @@ class Ranking_DSSMCNN(object):
                         break
                     h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
 
-                print(h_i_List)
                 h_outputs = []
                 for h0 in h_i_List:
                     if h0 == h_i_List[-1]:
