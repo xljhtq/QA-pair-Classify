@@ -96,14 +96,14 @@ class Ranking_DSSMCNN(object):
                 conv_BN, mean, var, beta, offset = self.batch_normalization(conv, num_filters)
                 h = tf.nn.tanh(conv_BN)
 
-                (_, b, c, d) = h.shape
+                (a, b, c, d) = h.get_shape()
                 h_i_List = []
                 for i in range(C):
                     if i == C - 1:
                         h_i_List.append(
-                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [a, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [a, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
@@ -132,14 +132,14 @@ class Ranking_DSSMCNN(object):
                 conv_BN = self.batch_same(conv, mean, var, beta, offset)
                 h = tf.nn.tanh(conv_BN)
 
-                (_, b, c, d) = h.shape
+                (a, b, c, d) = h.shape
                 h_i_List = []
                 for i in range(C):
                     if i == C - 1:
                         h_i_List.append(
-                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [a, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [a, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
@@ -168,14 +168,14 @@ class Ranking_DSSMCNN(object):
                 conv_BN = self.batch_same(conv, mean, var, beta, offset)
                 h = tf.nn.tanh(conv_BN)
 
-                (_, b, c, d) = h.shape
+                (a, b, c, d) = h.shape
                 h_i_List = []
                 for i in range(C):
                     if i == C - 1:
                         h_i_List.append(
-                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [a, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [a, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
