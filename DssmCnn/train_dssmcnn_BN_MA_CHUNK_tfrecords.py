@@ -105,8 +105,8 @@ def read_records(filenameList, max_len=25, epochs=30, batch_size=128):
     query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.shuffle_batch(
         [query1, query2, query3, label], batch_size=batch_size,
         num_threads=2,
-        capacity=1000 + 3 * batch_size,
-        min_after_dequeue=1000)
+        capacity=100000 + 3 * batch_size,
+        min_after_dequeue=100000)
     # query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.batch(
     #     [query1, query2, query3, label],
     #     batch_size=batch_size,
