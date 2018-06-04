@@ -4,7 +4,7 @@
 import tensorflow as tf
 
 
-class Ranking_DSSMCNN(object):
+class Ranking_DSSMCNN_tfrecords(object):
     def leaky_relu(self, x, leak=0.2):
         f1 = 0.5 * (1 + leak)
         f2 = 0.5 * (1 - leak)

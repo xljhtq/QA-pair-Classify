@@ -58,7 +58,6 @@ class Ranking_DSSMCNN(object):
                  l2_reg_lambda=0.0):
 
         # Placeholders for input, output and dropout
-        # self.batch_size=tf.placeholder(tf.int32, [None, max_len], name="input_left")
         self.input_left = tf.placeholder(tf.int32, [None, max_len], name="input_left")
         self.input_centre = tf.placeholder(tf.int32, [None, max_len], name="input_centre")
         self.input_right = tf.placeholder(tf.int32, [None, max_len], name="input_right")
@@ -123,7 +122,6 @@ class Ranking_DSSMCNN(object):
                                             name="pool")  # pooled: [batch_size, 1, 1, out_channels]
                     h_outputs.append(pooled)
 
-                self.h_outputs = h_outputs
                 self.h_stack_left = h_stack_left = tf.stack(values=h_outputs, axis=4)
                 (a, b, c, d, e) = h_stack_left.shape
                 self.h_reshape_left = h_reshape_left = tf.reshape(h_stack_left, [-1, 1, 1, int(d * e)])
