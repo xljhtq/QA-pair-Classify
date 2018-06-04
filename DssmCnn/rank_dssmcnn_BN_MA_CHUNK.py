@@ -101,9 +101,9 @@ class Ranking_DSSMCNN(object):
                 for i in range(C):
                     if i == C - 1:
                         h_i_List.append(
-                            tf.slice(h, [0, i * int(b / C), 0, 0], [int(a), int(b - i * int(b / C)), int(c), int(d)]))
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [int(a), int(b / C), int(c), int(d)]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
@@ -137,9 +137,9 @@ class Ranking_DSSMCNN(object):
                 for i in range(C):
                     if i == C - 1:
                         h_i_List.append(
-                            tf.slice(h, [0, i * int(b / C), 0, 0], [int(a), int(b - i * int(b / C)), int(c), int(d)]))
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [int(a), int(b / C), int(c), int(d)]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
@@ -173,9 +173,9 @@ class Ranking_DSSMCNN(object):
                 for i in range(C):
                     if i == C - 1:
                         h_i_List.append(
-                            tf.slice(h, [0, i * int(b / C), 0, 0], [int(a), int(b - i * int(b / C)), int(c), int(d)]))
+                            tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b - i * int(b / C)), int(c), int(d)]))
                         break
-                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [int(a), int(b / C), int(c), int(d)]))
+                    h_i_List.append(tf.slice(h, [0, i * int(b / C), 0, 0], [-1, int(b / C), int(c), int(d)]))
 
                 h_outputs = []
                 for h0 in h_i_List:
