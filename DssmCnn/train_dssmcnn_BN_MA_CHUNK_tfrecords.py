@@ -6,7 +6,6 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_dssmcnn_BN_MA_CHUNK_tfrecords import Ranking_DSSMCNN_tfrecords
 from rank_dssmcnn_BN_MA_CHUNK import Ranking_DSSMCNN
 from vocab_utils_tfrecords import Vocab
 
@@ -235,56 +234,19 @@ def main(_):
         sess = tf.Session(config=session_conf)
         with sess.as_default():
             print("------------train model--------------")
-            with tf.variable_scope("Model", reuse=None):
-                cnn = Ranking_DSSMCNN_tfrecords(
-                    input_left=input_left,
-                    input_centre=input_centre,
-                    input_right=input_right,
-                    input_y=input_y,
-                    dropout_keep_prob=0.5,
-                    vocab_size=len(wordVocab.word2id),
-                    embedding_size=FLAGS.embedding_dim,
-                    filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
-                    num_filters=FLAGS.num_filters,
-                    num_hidden=FLAGS.num_hidden,
-                    fix_word_vec=FLAGS.fix_word_vec,
-                    word_vocab=wordVocab,
-                    C=4,
-                    l2_reg_lambda=FLAGS.l2_reg_lambda)
+            # with tf.variable_scope("Model", reuse=None):
+            cnn = Ranking_DSSMCNN(
+                max_len=FLAGS.max_len,
+                vocab_size=len(wordVocab.word2id),
+                embedding_size=FLAGS.embedding_dim,
+                filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
+                num_filters=FLAGS.num_filters,
+                num_hidden=FLAGS.num_hidden,
+                fix_word_vec=FLAGS.fix_word_vec,
+                word_vocab=wordVocab,
+                C=4,
+                l2_reg_lambda=FLAGS.l2_reg_lambda)
 
-            print("------------test model--------------")
-            with tf.variable_scope("Model", reuse=tf.AUTO_REUSE):
-                cnn_test = Ranking_DSSMCNN_tfrecords(
-                    input_left=input_left_test,
-                    input_centre=input_centre_test,
-                    input_right=input_right_test,
-                    input_y=input_y_test,
-                    dropout_keep_prob=1.0,
-                    vocab_size=len(wordVocab.word2id),
-                    embedding_size=FLAGS.embedding_dim,
-                    filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
-                    num_filters=FLAGS.num_filters,
-                    num_hidden=FLAGS.num_hidden,
-                    fix_word_vec=FLAGS.fix_word_vec,
-                    word_vocab=wordVocab,
-                    C=4,
-                    l2_reg_lambda=FLAGS.l2_reg_lambda)
-
-            print("------------save model--------------")
-            with tf.variable_scope("Model", reuse=tf.AUTO_REUSE):
-                cnn_save = Ranking_DSSMCNN(
-                    max_len=FLAGS.max_len,
-                    vocab_size=len(wordVocab.word2id),
-                    embedding_size=FLAGS.embedding_dim,
-                    filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
-                    num_filters=FLAGS.num_filters,
-                    num_hidden=FLAGS.num_hidden,
-                    fix_word_vec=FLAGS.fix_word_vec,
-                    word_vocab=wordVocab,
-                    C=4,
-                    l2_reg_lambda=FLAGS.l2_reg_lambda)
-
-            # Define Training procedure
             global_step = tf.Variable(0, name="global_step", trainable=False)
             optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
@@ -318,13 +280,22 @@ def main(_):
                 print("DONE!")
                 sys.stdout.flush()
 
-            def dev_whole(num_batches_per_epoch_test, cnn_test, sess):
+            def dev_whole(num_batches_per_epoch_test):
                 accuracies = []
                 losses = []
+
                 for j in range(num_batches_per_epoch_test):
+                    input_left_test_real, input_centre_test_real, input_right_test_real, input_y_test_real = sess.run(
+                        [input_left_test, input_centre_test, input_right_test, input_y_test])
                     loss, accuracy, softmax_score, left, right = sess.run(
-                        [cnn_test.loss, cnn_test.accuracy, cnn_test.softmax_score, cnn_test.cosine_left,
-                         cnn_test.cosine_right])
+                        [cnn.loss, cnn.accuracy, cnn.softmax_score, cnn.cosine_left, cnn.cosine_right],
+                        feed_dict={
+                            cnn.input_left: input_left_test_real,
+                            cnn.input_centre: input_centre_test_real,
+                            cnn.input_right: input_right_test_real,
+                            cnn.input_y: input_y_test_real,
+                            cnn.dropout_keep_prob: 1.0
+                        })
                     losses.append(loss)
                     accuracies.append(accuracy)
                 print("left_cosine: ", left)
@@ -350,10 +321,19 @@ def main(_):
                     print("batch_numbers:", num_batches_per_epoch_train)
                     train_loss = 0
                     for j in range(num_batches_per_epoch_train):
-                        _, current_step, loss, accuracy = sess.run([train_op, global_step, cnn.loss, cnn.accuracy])
+                        input_left_real, input_centre_real, input_right_real, input_y_real = sess.run(
+                            [input_left, input_centre, input_right, input_y])
+                        _, current_step, loss, accuracy = sess.run([train_op, global_step, cnn.loss, cnn.accuracy],
+                                                                   feed_dict={
+                                                                       cnn.input_left: input_left_real,
+                                                                       cnn.input_centre: input_centre_real,
+                                                                       cnn.input_right: input_right_real,
+                                                                       cnn.input_y: input_y_real,
+                                                                       cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
+                                                                   })
                         train_loss += loss
 
-                        if current_step % 1000 == 0:
+                        if current_step % 10000 == 0:
                             print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                             sys.stdout.flush()
 
@@ -361,10 +341,11 @@ def main(_):
                     total_train_loss.append(train_loss)
                     sys.stdout.flush()
 
+                    # continue
                     print("\n------------------Evaluation:-----------------------")
                     num_batches_per_epoch_test = int(totalLines_test / FLAGS.batch_size) + 1
                     print("batch_numbers_test:", num_batches_per_epoch_test)
-                    _, accuracy = dev_whole(num_batches_per_epoch_test, cnn_test, sess)
+                    _, accuracy = dev_whole(num_batches_per_epoch_test)
                     dev_accuracy.append(accuracy)
 
                     print("--------Recently accuracy:--------")
@@ -378,14 +359,14 @@ def main(_):
                     sys.stdout.flush()
 
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                    print("-------------------Saved model checkpoint to {}--------------------\n".format(path))
+                    print("-------------------Saved model checkpoint to {}--------------------".format(path))
                     sys.stdout.flush()
                     output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
                                                                                     output_node_names=[
-                                                                                        'Model_2/accuracy/accuracy',
-                                                                                        'Model_2/softmax/score',
-                                                                                        'Model_2/cosine_left/div',
-                                                                                        'Model_2/cosine_right/div'])
+                                                                                        'accuracy/accuracy',
+                                                                                        'softmax/score',
+                                                                                        'cosine_left/div',
+                                                                                        'cosine_right/div'])
                     for node in output_graph_def.node:
                         if node.op == 'RefSwitch':
                             node.op = 'Switch'
@@ -415,11 +396,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--wordvec_path", default="data/wordvec.vec", help="wordvec_path")
     parser.add_argument("--train_dir", default="/home/haojianyong/file_1/CNN/", help="Training dir root")
-    parser.add_argument("--train_path", default="data_dssm/train2.txt", help="train path")
-    parser.add_argument("--test_path", default="data_dssm/test2.txt", help="test path")
+    parser.add_argument("--train_path", default="data_dssm/train.txt", help="train path")
+    parser.add_argument("--test_path", default="data_dssm/train2.txt", help="test path")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
-    parser.add_argument("--fileNumber", type=int, default=5, help="Number of tfRecordsfile (default: 5)")
-    parser.add_argument("--num_epochs", type=int, default=2, help="Number of training epochs (default: 200)")
+    parser.add_argument("--fileNumber", type=int, default=10, help="Number of tfRecordsfile (default: 5)")
+    parser.add_argument("--num_epochs", type=int, default=20, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
     parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 
