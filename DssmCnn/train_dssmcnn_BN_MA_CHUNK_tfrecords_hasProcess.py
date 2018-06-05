@@ -38,7 +38,7 @@ def processTFrecords(savePath, fileNumber=2):
 
 
 def read_records(filenameList, max_len=25, epochs=30, batch_size=128):
-    train_queue = tf.train.string_input_producer(filenameList, num_epochs=epochs)
+    train_queue = tf.train.string_input_producer(filenameList, shuffle=True, num_epochs=epochs)
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(train_queue)
     features = tf.parse_single_example(
@@ -66,16 +66,16 @@ def read_records(filenameList, max_len=25, epochs=30, batch_size=128):
     query2 = tf.reshape(query2, [max_len])
     query3 = tf.reshape(query3, [max_len])
 
-    query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.shuffle_batch(
-        [query1, query2, query3, label], batch_size=batch_size,
-        num_threads=2,
-        capacity=100000 + 3 * batch_size,
-        min_after_dequeue=100000)
-    # query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.batch(
-    #     [query1, query2, query3, label],
-    #     batch_size=batch_size,
-    #     num_threads=2,
-    #     capacity=1000 + 3 * batch_size)
+    # query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.shuffle_batch(
+    #     [query1, query2, query3, label], batch_size=batch_size,
+    #     num_threads=4,
+    #     capacity=10000 + 8 * batch_size,
+    #     min_after_dequeue=10000)
+    query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.batch(
+        [query1, query2, query3, label],
+        batch_size=batch_size,
+        num_threads=4,
+        capacity=10000 + 8 * batch_size)
 
     return query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch
 
