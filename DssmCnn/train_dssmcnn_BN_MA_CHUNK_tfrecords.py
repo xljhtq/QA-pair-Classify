@@ -71,10 +71,7 @@ def processTFrecords(wordVocab, savePath, max_len=25, fileNumber=2):
 
 
 def read_records(filenameList, max_len=25, epochs=30, batch_size=128):
-    train_queue = tf.train.string_input_producer(filenameList, num_epochs=epochs)
-    # validation_queue = tf.train.string_input_producer(['validation.tfrecords'], num_epochs=FLAGS.epochs)
-    # test_queue = tf.train.string_input_producer(['test.tfrecords'], num_epochs=FLAGS.epochs)
-    # queue = tf.QueueBase.from_list(index, [train_queue])
+    train_queue = tf.train.string_input_producer(filenameList, shuffle=True, num_epochs=epochs)
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(train_queue)
     features = tf.parse_single_example(
@@ -102,16 +99,16 @@ def read_records(filenameList, max_len=25, epochs=30, batch_size=128):
     query2 = tf.reshape(query2, [max_len])
     query3 = tf.reshape(query3, [max_len])
 
-    query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.shuffle_batch(
-        [query1, query2, query3, label], batch_size=batch_size,
-        num_threads=2,
-        capacity=100000 + 3 * batch_size,
-        min_after_dequeue=100000)
-    # query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.batch(
-    #     [query1, query2, query3, label],
-    #     batch_size=batch_size,
-    #     num_threads=2,
-    #     capacity=1000 + 3 * batch_size)
+    # query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.shuffle_batch(
+    #     [query1, query2, query3, label], batch_size=batch_size,
+    #     num_threads=4,
+    #     capacity=10000 + 8 * batch_size,
+    #     min_after_dequeue=10000)
+    query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch = tf.train.batch(
+        [query1, query2, query3, label],
+        batch_size=batch_size,
+        num_threads=4,
+        capacity=10000 + 8 * batch_size)
 
     return query1_batch_serialized, query2_batch_serialized, query3_batch_serialized, label_batch
 
@@ -396,11 +393,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--wordvec_path", default="data/wordvec.vec", help="wordvec_path")
     parser.add_argument("--train_dir", default="/home/haojianyong/file_1/CNN/", help="Training dir root")
-    parser.add_argument("--train_path", default="data_dssm/train.txt", help="train path")
-    parser.add_argument("--test_path", default="data_dssm/train2.txt", help="test path")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
-    parser.add_argument("--fileNumber", type=int, default=10, help="Number of tfRecordsfile (default: 5)")
-    parser.add_argument("--num_epochs", type=int, default=20, help="Number of training epochs (default: 200)")
+    parser.add_argument("--train_path", default="data_dssm/train2.txt", help="train path")
+    parser.add_argument("--test_path", default="data_dssm/train3.txt", help="test path")
+    parser.add_argument("--batch_size", type=int, default=5, help="Batch Size (default: 64)")
+    parser.add_argument("--fileNumber", type=int, default=2, help="Number of tfRecordsfile (default: 5)")
+    parser.add_argument("--num_epochs", type=int, default=2, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
     parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 
