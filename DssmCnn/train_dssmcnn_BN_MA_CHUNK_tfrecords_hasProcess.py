@@ -254,6 +254,10 @@ def main(_):
                         if current_step % 10000 == 0:
                             print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                             sys.stdout.flush()
+                        if current_step % 200000 == 0:
+                            path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                            print("-------------------Saved model checkpoint to {}--------------------".format(path))
+                            sys.stdout.flush()
 
                     print((current_step + 1) / num_batches_per_epoch_train, " epoch, train_loss:", train_loss)
                     total_train_loss.append(train_loss)
