@@ -107,7 +107,7 @@ def main(_):
             else:
                 out_op.write("0 1" + "\t" + right + "\t" + centre + "\t" + left + "\n")
 
-    os.system("shuf -n" + str(count) + FLAGS.output_mix_path + " >" + FLAGS.output_shuf_path)
+    os.system("shuf -n" + str(count) + " " + FLAGS.output_mix_path + " >" + FLAGS.output_shuf_path)
 
 
 parser = argparse.ArgumentParser()
