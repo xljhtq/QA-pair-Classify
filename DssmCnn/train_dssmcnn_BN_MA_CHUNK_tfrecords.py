@@ -360,9 +360,6 @@ def main(_):
                     sys.stdout.flush()
                     output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
                                                                                     output_node_names=[
-                                                                                        'accuracy/accuracy',
-                                                                                        'softmax/score',
-                                                                                        'cosine_left/div',
                                                                                         'cosine_right/div'])
                     for node in output_graph_def.node:
                         if node.op == 'RefSwitch':
@@ -372,8 +369,10 @@ def main(_):
                                     node.input[index] = node.input[index] + '/read'
                         elif node.op == 'AssignSub':
                             node.op = 'Sub'
-                            if 'use_locking' in node.attr: del node.attr['use_locking']
-                    with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm.pb", "wb") as f:
+                            if 'use_locking' in node.attr:
+                                del node.attr['use_locking']
+
+                    with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm_test.pb", "wb") as f:
                         f.write(output_graph_def.SerializeToString())
                     print("%d ops in the final graph.\n" % len(output_graph_def.node))
 
@@ -397,7 +396,7 @@ if __name__ == '__main__':
     parser.add_argument("--test_path", default="data_dssm/train3.txt", help="test path")
     parser.add_argument("--batch_size", type=int, default=5, help="Batch Size (default: 64)")
     parser.add_argument("--fileNumber", type=int, default=2, help="Number of tfRecordsfile (default: 5)")
-    parser.add_argument("--num_epochs", type=int, default=2, help="Number of training epochs (default: 200)")
+    parser.add_argument("--num_epochs", type=int, default=5, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
     parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 

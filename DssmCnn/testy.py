@@ -111,15 +111,15 @@ def main(_):
     wordVocab.fromText_format3(FLAGS.train_dir, FLAGS.wordvec_path)
     sys.stdout.flush()
 
-    print("3.1 Start generating TFrecords File--train...")
-    totalLines_train = processTFrecords(savePath=save_path, fileNumber=FLAGS.fileNumber)
-    print("totalLines_train:", totalLines_train)
-    sys.stdout.flush()
-    print("3.2 Start generating TFrecords File--test...")
-    test_path = FLAGS.train_dir + FLAGS.test_path
-    totalLines_test = processTFrecords_test(test_path=test_path, fileNumber=1)
-    print("totalLines_test:", totalLines_test)
-    sys.stdout.flush()
+    # print("3.1 Start generating TFrecords File--train...")
+    # # totalLines_train = processTFrecords(savePath=save_path, fileNumber=FLAGS.fileNumber)
+    # print("totalLines_train:", totalLines_train)
+    # sys.stdout.flush()
+    # print("3.2 Start generating TFrecords File--test...")
+    # test_path = FLAGS.train_dir + FLAGS.test_path
+    # totalLines_test = processTFrecords_test(test_path=test_path, fileNumber=1)
+    # print("totalLines_test:", totalLines_test)
+    # sys.stdout.flush()
 
     print("4.Start loading TFrecords File...")
     fileNameList = []
@@ -130,17 +130,6 @@ def main(_):
     sys.stdout.flush()
 
     with tf.Graph().as_default():
-        input_left_test, input_centre_test, input_right_test, input_y_test = read_records(
-            filenameList=[save_path + "test-0.tfrecords"],
-            max_len=FLAGS.max_len,
-            epochs=FLAGS.num_epochs,
-            batch_size=FLAGS.batch_size)
-
-        input_left, input_centre, input_right, input_y = read_records(
-            filenameList=fileNameList,
-            max_len=FLAGS.max_len,
-            epochs=FLAGS.num_epochs,
-            batch_size=FLAGS.batch_size)
 
         print("Loading Model...")
         sys.stdout.flush()
@@ -173,8 +162,6 @@ def main(_):
             saver = tf.train.Saver(tf.global_variables(), max_to_keep=20)
             init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
             sess.run(init_op)
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
             has_pre_trained_model = False
             out_dir = os.path.abspath(os.path.join(FLAGS.train_dir, "runs"))
@@ -191,121 +178,28 @@ def main(_):
                     has_pre_trained_model = True
                     sys.stdout.flush()
 
-            checkpoint_prefix = os.path.join(out_dir, "model")
             if has_pre_trained_model:
                 print("Restoring model from " + ckpt.model_checkpoint_path)
                 saver.restore(sess, ckpt.model_checkpoint_path)
                 print("DONE!")
                 sys.stdout.flush()
 
-            def dev_whole(num_batches_per_epoch_test):
-                accuracies = []
-                losses = []
-
-                for j in range(num_batches_per_epoch_test):
-                    input_left_test_real, input_centre_test_real, input_right_test_real, input_y_test_real = sess.run(
-                        [input_left_test, input_centre_test, input_right_test, input_y_test])
-                    loss, accuracy, softmax_score, left, right = sess.run(
-                        [cnn.loss, cnn.accuracy, cnn.softmax_score, cnn.cosine_left, cnn.cosine_right],
-                        feed_dict={
-                            cnn.input_left: input_left_test_real,
-                            cnn.input_centre: input_centre_test_real,
-                            cnn.input_right: input_right_test_real,
-                            cnn.input_y: input_y_test_real,
-                            cnn.dropout_keep_prob: 1.0
-                        })
-                    losses.append(loss)
-                    accuracies.append(accuracy)
-                print("left_cosine: ", left)
-                print("right_cosine: ", right)
-                sys.stdout.flush()
-                return np.mean(np.array(losses)), np.mean(np.array(accuracies))
-
-            def overfit(dev_accuracy):
-                n = len(dev_accuracy)
-                if n < 4:
-                    return False
-                for i in range(n - 4, n):
-                    if dev_accuracy[i] > dev_accuracy[i - 1]:
-                        return False
-                return True
-
-            dev_accuracy = []
-            total_train_loss = []
-            current_step = 0
-            try:
-                while not coord.should_stop():
-                    num_batches_per_epoch_train = int(totalLines_train / FLAGS.batch_size) + 1
-                    print("batch_numbers:", num_batches_per_epoch_train)
-                    train_loss = 0
-                    for j in range(num_batches_per_epoch_train):
-                        input_left_real, input_centre_real, input_right_real, input_y_real = sess.run(
-                            [input_left, input_centre, input_right, input_y])
-                        _, current_step, loss, accuracy = sess.run([train_op, global_step, cnn.loss, cnn.accuracy],
-                                                                   feed_dict={
-                                                                       cnn.input_left: input_left_real,
-                                                                       cnn.input_centre: input_centre_real,
-                                                                       cnn.input_right: input_right_real,
-                                                                       cnn.input_y: input_y_real,
-                                                                       cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
-                                                                   })
-                        train_loss += loss
-
-                        if current_step % 10000 == 0:
-                            print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
-                            sys.stdout.flush()
-                        if current_step % 200000 == 0:
-                            path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                            print("-------------------Saved model checkpoint to {}--------------------".format(path))
-                            sys.stdout.flush()
-
-                    print((current_step + 1) / num_batches_per_epoch_train, " epoch, train_loss:", train_loss)
-                    total_train_loss.append(train_loss)
-                    sys.stdout.flush()
-
-                    # continue
-                    print("\n------------------Evaluation:-----------------------")
-                    num_batches_per_epoch_test = int(totalLines_test / FLAGS.batch_size) + 1
-                    print("batch_numbers_test:", num_batches_per_epoch_test)
-                    _, accuracy = dev_whole(num_batches_per_epoch_test)
-                    dev_accuracy.append(accuracy)
-
-                    print("--------Recently accuracy:--------")
-                    print(dev_accuracy[-10:])
-                    print("--------Recently train_loss:------")
-                    print(total_train_loss[-10:])
-                    if overfit(dev_accuracy):
-                        print('-----Overfit!!----')
-                        break
-                    print("")
-                    sys.stdout.flush()
-
-                    path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                    print("-------------------Saved model checkpoint to {}--------------------".format(path))
-                    sys.stdout.flush()
-                    output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
-                                                                                    output_node_names=['cosine_right/div'])
-                    for node in output_graph_def.node:
-                        if node.op == 'RefSwitch':
-                            node.op = 'Switch'
-                            for index in xrange(len(node.input)):
-                                if 'moving_' in node.input[index]:
-                                    node.input[index] = node.input[index] + '/read'
-                        elif node.op == 'AssignSub':
-                            node.op = 'Sub'
-                            if 'use_locking' in node.attr: del node.attr['use_locking']
-                    with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm.pb", "wb") as f:
-                        f.write(output_graph_def.SerializeToString())
-                    print("%d ops in the final graph.\n" % len(output_graph_def.node))
-
-
-            except tf.errors.OutOfRangeError:
-                print("Done")
-            finally:
-                print("--------------------------finally---------------------------")
-                print("current_step:", current_step)
-                coord.request_stop()
-                coord.join(threads)
+            print("-------------------Saved model checkpoint to--------------------")
+            sys.stdout.flush()
+            output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
+                                                                            output_node_names=['cosine_right/div'])
+            for node in output_graph_def.node:
+                if node.op == 'RefSwitch':
+                    node.op = 'Switch'
+                    for index in xrange(len(node.input)):
+                        if 'moving_' in node.input[index]:
+                            node.input[index] = node.input[index] + '/read'
+                elif node.op == 'AssignSub':
+                    node.op = 'Sub'
+                    if 'use_locking' in node.attr: del node.attr['use_locking']
+            with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm_test2.pb", "wb") as f:
+                f.write(output_graph_def.SerializeToString())
+            print("%d ops in the final graph.\n" % len(output_graph_def.node))
 
             sess.close()
 
@@ -316,9 +210,9 @@ if __name__ == '__main__':
     parser.add_argument("--train_dir", default="/home/haojianyong/file_1/CNN/", help="Training dir root")
     parser.add_argument("--train_path", default="data_dssm/train.txt", help="train path")
     parser.add_argument("--test_path", default="data_dssm/train2.txt", help="test path")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch Size (default: 64)")
-    parser.add_argument("--fileNumber", type=int, default=10, help="Number of tfRecordsfile (default: 5)")
-    parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs (default: 200)")
+    parser.add_argument("--batch_size", type=int, default=5, help="Batch Size (default: 64)")
+    parser.add_argument("--fileNumber", type=int, default=2, help="Number of tfRecordsfile (default: 5)")
+    parser.add_argument("--num_epochs", type=int, default=2, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
     parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 
