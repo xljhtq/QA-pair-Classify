@@ -147,9 +147,19 @@ class Ranking_DSSMCNN(object):
         print("----------------------------------------------------------------------------")
         ######1. FC layer & dropout  ## tanh(), leaky relu()
         with tf.name_scope("hidden_dropout"):
+            ###3. FC layer & dropout
+            with tf.name_scope("hidden_right"):
+                xw_plus_b = tf.nn.xw_plus_b(self.h_pool_right, W, b, name="hidden_output_right")
+                xw_plus_b_BN, mean, var, beta, offset = self.batch_normalization(xw_plus_b, num_hidden)
+                self.hidden_output_right = tf.nn.tanh(xw_plus_b_BN)
+                print(mean)
+            with tf.name_scope("dropout_right"):
+                self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,
+                                                  name="hidden_output_drop_right")
+
             with tf.name_scope("hidden_left"):
                 xw_plus_b = tf.nn.xw_plus_b(self.h_pool_left, W, b, name="hidden_output_left")
-                xw_plus_b_BN, mean, var, beta, offset = self.batch_normalization(xw_plus_b, num_hidden)
+                xw_plus_b_BN = self.batch_same(xw_plus_b, mean, var, beta, offset)
                 self.hidden_output_left = tf.nn.tanh(xw_plus_b_BN)
                 print(mean)
             with tf.name_scope("dropout_left"):
@@ -165,16 +175,6 @@ class Ranking_DSSMCNN(object):
             with tf.name_scope("dropout_centre"):
                 self.h_drop_centre = tf.nn.dropout(self.hidden_output_centre, self.dropout_keep_prob,
                                                    name="hidden_output_drop_centre")
-
-            ###3. FC layer & dropout
-            with tf.name_scope("hidden_right"):
-                xw_plus_b = tf.nn.xw_plus_b(self.h_pool_right, W, b, name="hidden_output_right")
-                xw_plus_b_BN = self.batch_same(xw_plus_b, mean, var, beta, offset)
-                self.hidden_output_right = tf.nn.tanh(xw_plus_b_BN)
-                print(mean)
-            with tf.name_scope("dropout_right"):
-                self.h_drop_right = tf.nn.dropout(self.hidden_output_right, self.dropout_keep_prob,
-                                                  name="hidden_output_drop_right")
 
         # Compute L1 distance
         with tf.name_scope("left_L1"):
