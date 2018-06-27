@@ -90,9 +90,8 @@ class Ranking_DSSMCNN(object):
             W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1),
                             name="W_filter-%s" % filter_size)  # W: [filter_height, filter_width, in_channels, out_channels], 与input对应
             print(W)
-            with tf.name_scope("conv-maxpool-left-%s" % filter_size):
-                conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID",
-                                    name="conv")  # conv: [batch_size, 20-2+1, 1, out_channels]
+            with tf.name_scope("conv-maxpool-right-%s" % filter_size):
+                conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
                 conv_BN, mean, var, beta, offset = self.batch_normalization(conv, num_filters)
                 print(mean)
                 h = tf.nn.tanh(conv_BN)
@@ -100,22 +99,24 @@ class Ranking_DSSMCNN(object):
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
                                         padding='VALID',
-                                        name="pool")  # pooled: [batch_size, 1, 1, out_channels]
-                pooled_outputs_left.append(pooled)
-            with tf.name_scope("conv-maxpool-right-%s" % filter_size):
-                conv = tf.nn.conv2d(self.embedded_chars_right, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
+                                        name="pool")
+                pooled_outputs_right.append(pooled)
+
+            with tf.name_scope("conv-maxpool-left-%s" % filter_size):
+                conv = tf.nn.conv2d(self.embedded_chars_left, W, strides=[1, 1, 1, 1], padding="VALID",
+                                    name="conv")  # conv: [batch_size, 20-2+1, 1, out_channels]
                 conv_BN = self.batch_same(conv, mean, var, beta, offset)
                 h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],
                                         strides=[1, 1, 1, 1],
                                         padding='VALID',
-                                        name="pool")
-                pooled_outputs_right.append(pooled)
+                                        name="pool")  # pooled: [batch_size, 1, 1, out_channels]
+                pooled_outputs_left.append(pooled)
+
             with tf.name_scope("conv-maxpool-centre-%s" % filter_size):
                 conv = tf.nn.conv2d(self.embedded_chars_centre, W, strides=[1, 1, 1, 1], padding="VALID", name="conv")
                 conv_BN = self.batch_same(conv, mean, var, beta, offset)
-                print(mean)
                 h = tf.nn.tanh(conv_BN)
                 pooled = tf.nn.max_pool(h,
                                         ksize=[1, max_len - filter_size + 1, 1, 1],

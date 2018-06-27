@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_dssmcnn_BN_MA_CHUNK import Ranking_DSSMCNN
+from rank_dssmcnn_BN_MA import Ranking_DSSMCNN
 from vocab_utils_tfrecords import Vocab
 
 
@@ -153,6 +153,17 @@ def main(_):
         with sess.as_default():
             print("------------train model--------------")
             # with tf.variable_scope("Model", reuse=None):
+            # cnn = Ranking_DSSMCNN(
+            #     max_len=FLAGS.max_len,
+            #     vocab_size=len(wordVocab.word2id),
+            #     embedding_size=FLAGS.embedding_dim,
+            #     filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
+            #     num_filters=FLAGS.num_filters,
+            #     num_hidden=FLAGS.num_hidden,
+            #     fix_word_vec=FLAGS.fix_word_vec,
+            #     word_vocab=wordVocab,
+            #     C=4,
+            #     l2_reg_lambda=FLAGS.l2_reg_lambda)
             cnn = Ranking_DSSMCNN(
                 max_len=FLAGS.max_len,
                 vocab_size=len(wordVocab.word2id),
@@ -162,7 +173,6 @@ def main(_):
                 num_hidden=FLAGS.num_hidden,
                 fix_word_vec=FLAGS.fix_word_vec,
                 word_vocab=wordVocab,
-                C=4,
                 l2_reg_lambda=FLAGS.l2_reg_lambda)
 
             global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -254,10 +264,10 @@ def main(_):
                         if current_step % 10000 == 0:
                             print("step {}, loss {}, acc {}".format(current_step, loss, accuracy))
                             sys.stdout.flush()
-                        if current_step % 200000 == 0:
-                            path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                            print("-------------------Saved model checkpoint to {}--------------------".format(path))
-                            sys.stdout.flush()
+                        # if current_step % 200000 == 0:
+                        #     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+                        #     print("-------------------Saved model checkpoint to {}--------------------".format(path))
+                        #     sys.stdout.flush()
 
                     print((current_step + 1) / num_batches_per_epoch_train, " epoch, train_loss:", train_loss)
                     total_train_loss.append(train_loss)

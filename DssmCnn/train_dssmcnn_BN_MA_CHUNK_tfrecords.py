@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_dssmcnn_BN_MA_CHUNK import Ranking_DSSMCNN
+from rank_dssmcnn_BN_MA import Ranking_DSSMCNN
 from vocab_utils_tfrecords import Vocab
 
 
@@ -232,6 +232,17 @@ def main(_):
         with sess.as_default():
             print("------------train model--------------")
             # with tf.variable_scope("Model", reuse=None):
+            # cnn = Ranking_DSSMCNN(
+            #     max_len=FLAGS.max_len,
+            #     vocab_size=len(wordVocab.word2id),
+            #     embedding_size=FLAGS.embedding_dim,
+            #     filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
+            #     num_filters=FLAGS.num_filters,
+            #     num_hidden=FLAGS.num_hidden,
+            #     fix_word_vec=FLAGS.fix_word_vec,
+            #     word_vocab=wordVocab,
+            #     C=4,
+            #     l2_reg_lambda=FLAGS.l2_reg_lambda)
             cnn = Ranking_DSSMCNN(
                 max_len=FLAGS.max_len,
                 vocab_size=len(wordVocab.word2id),
@@ -241,7 +252,6 @@ def main(_):
                 num_hidden=FLAGS.num_hidden,
                 fix_word_vec=FLAGS.fix_word_vec,
                 word_vocab=wordVocab,
-                C=4,
                 l2_reg_lambda=FLAGS.l2_reg_lambda)
 
             global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -360,6 +370,9 @@ def main(_):
                     sys.stdout.flush()
                     output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
                                                                                     output_node_names=[
+                                                                                        'accuracy/accuracy',
+                                                                                        'softmax/score',
+                                                                                        'cosine_left/div',
                                                                                         'cosine_right/div'])
                     for node in output_graph_def.node:
                         if node.op == 'RefSwitch':

@@ -6,7 +6,7 @@ import os
 import sys
 import numpy as np
 import tensorflow as tf
-from rank_dssmcnn_BN_MA_CHUNK import Ranking_DSSMCNN
+from rank_dssmcnn_BN_MA import Ranking_DSSMCNN
 from vocab_utils_tfrecords import Vocab
 
 
@@ -142,6 +142,17 @@ def main(_):
         with sess.as_default():
             print("------------train model--------------")
             # with tf.variable_scope("Model", reuse=None):
+            # cnn = Ranking_DSSMCNN(
+            #     max_len=FLAGS.max_len,
+            #     vocab_size=len(wordVocab.word2id),
+            #     embedding_size=FLAGS.embedding_dim,
+            #     filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
+            #     num_filters=FLAGS.num_filters,
+            #     num_hidden=FLAGS.num_hidden,
+            #     fix_word_vec=FLAGS.fix_word_vec,
+            #     word_vocab=wordVocab,
+            #     C=4,
+            #     l2_reg_lambda=FLAGS.l2_reg_lambda)
             cnn = Ranking_DSSMCNN(
                 max_len=FLAGS.max_len,
                 vocab_size=len(wordVocab.word2id),
@@ -151,7 +162,6 @@ def main(_):
                 num_hidden=FLAGS.num_hidden,
                 fix_word_vec=FLAGS.fix_word_vec,
                 word_vocab=wordVocab,
-                C=4,
                 l2_reg_lambda=FLAGS.l2_reg_lambda)
 
             global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -201,7 +211,7 @@ def main(_):
                 f.write(output_graph_def.SerializeToString())
             print("%d ops in the final graph.\n" % len(output_graph_def.node))
 
-            sess.close()
+        sess.close()
 
 
 if __name__ == '__main__':
@@ -212,7 +222,7 @@ if __name__ == '__main__':
     parser.add_argument("--test_path", default="data_dssm/train2.txt", help="test path")
     parser.add_argument("--batch_size", type=int, default=5, help="Batch Size (default: 64)")
     parser.add_argument("--fileNumber", type=int, default=2, help="Number of tfRecordsfile (default: 5)")
-    parser.add_argument("--num_epochs", type=int, default=2, help="Number of training epochs (default: 200)")
+    parser.add_argument("--num_epochs", type=int, default=5, help="Number of training epochs (default: 200)")
     parser.add_argument("--max_len", type=int, default=25, help="max document length of input")
     parser.add_argument("--fix_word_vec", default=True, help="fix_word_vec")
 
