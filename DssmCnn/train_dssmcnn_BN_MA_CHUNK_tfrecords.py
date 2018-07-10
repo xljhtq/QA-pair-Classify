@@ -369,11 +369,7 @@ def main(_):
                     print("-------------------Saved model checkpoint to {}--------------------".format(path))
                     sys.stdout.flush()
                     output_graph_def = tf.graph_util.convert_variables_to_constants(sess, sess.graph_def,
-                                                                                    output_node_names=[
-                                                                                        'accuracy/accuracy',
-                                                                                        'softmax/score',
-                                                                                        'cosine_left/div',
-                                                                                        'cosine_right/div'])
+                                                                                    output_node_names=['cosine_right/div'])
                     for node in output_graph_def.node:
                         if node.op == 'RefSwitch':
                             node.op = 'Switch'
@@ -385,7 +381,7 @@ def main(_):
                             if 'use_locking' in node.attr:
                                 del node.attr['use_locking']
 
-                    with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm_test.pb", "wb") as f:
+                    with tf.gfile.GFile(FLAGS.train_dir + "runs/model_cnn_dssm_right.pb", "wb") as f:
                         f.write(output_graph_def.SerializeToString())
                     print("%d ops in the final graph.\n" % len(output_graph_def.node))
 
